@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "golang.go",
+    "neverik.go-critic",
+    "tamasfe.even-better-toml",
+    "ZainChen.json"
+  ]
+}
