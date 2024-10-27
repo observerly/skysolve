@@ -19,3 +19,19 @@ type GAIAQuery struct {
 }
 
 /*****************************************************************************************************************/
+
+type GAIAServiceClient struct {
+	URI   string
+	Query GAIAQuery
+}
+
+/*****************************************************************************************************************/
+
+func NewGAIAServiceClient() *GAIAServiceClient {
+	return &GAIAServiceClient{
+		URI:   "https://gea.esac.esa.int/tap-server/tap/sync",
+		Query: GAIAQuery{},
+	}
+}
+
+/*****************************************************************************************************************/
