@@ -12,7 +12,15 @@ package catalog
 
 import (
 	"bytes"
+	"encoding/csv"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strconv"
 	"text/template"
+
+	"github.com/observerly/skysolve/pkg/astrometry"
 )
 
 /*****************************************************************************************************************/
@@ -90,6 +98,132 @@ func (g *GAIAServiceClient) Build() (string, error) {
 
 	// Return the ADQL query string:
 	return buf.String(), nil
+}
+
+/*****************************************************************************************************************/
+
+func (g *GAIAServiceClient) PerformRadialSearch(eq astrometry.ICRSEquatorialCoordinate, radius float64, limit float64) ([]Source, error) {
+	// Set the query parameters:
+	g.Query.RA = eq.RA
+	g.Query.Dec = eq.Dec
+	g.Query.Radius = radius
+	g.Query.Limit = limit
+
+	// Construct the ADQL query from the template:
+	adqlQuery, err := g.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare the POST form data for the HTTP request:
+	formData := url.Values{}
+	formData.Set("REQUEST", "doQuery")
+	formData.Set("LANG", "ADQL")
+	formData.Set("FORMAT", "csv")
+	formData.Set("QUERY", adqlQuery)
+
+	// Send the HTTP request to the GAIA TAP service:
+	resp, err := http.PostForm(g.URI, formData)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Read the response body:
+	bodyBytes, _ := io.ReadAll(resp.Body)
+
+	// Check for HTTP errors and return the response body if not OK:
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GAIA TAP query failed: %s", string(bodyBytes))
+	}
+
+	// Parse the CSV data from the response body:
+	records, err := csv.NewReader(bytes.NewReader(bodyBytes)).ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal the CSV data into our struct array:
+	var stars []Source
+
+	// Iterate over the records and extract the source star data, skipping the header row:
+	for _, record := range records[1:] {
+		ra, err := strconv.ParseFloat(fmt.Sprintf("%v", record[2]), 64)
+		if err != nil {
+			continue
+		}
+
+		dec, err := strconv.ParseFloat(fmt.Sprintf("%v", record[3]), 64)
+		if err != nil {
+			continue
+		}
+
+		pmra, err := strconv.ParseFloat(fmt.Sprintf("%v", record[4]), 64)
+		if err != nil {
+			continue
+		}
+
+		pmdec, err := strconv.ParseFloat(fmt.Sprintf("%v", record[5]), 64)
+		if err != nil {
+			continue
+		}
+
+		parallax, err := strconv.ParseFloat(fmt.Sprintf("%v", record[6]), 64)
+		if err != nil {
+			continue
+		}
+
+		flux, err := strconv.ParseFloat(fmt.Sprintf("%v", record[7]), 64)
+		if err != nil {
+			continue
+		}
+
+		mag, err := strconv.ParseFloat(fmt.Sprintf("%v", record[8]), 64)
+		if err != nil {
+			continue
+		}
+
+		// Create a new source star object:
+		star := Source{
+			UID:                       record[0],
+			Designation:               record[1],
+			RA:                        ra,
+			Dec:                       dec,
+			ProperMotionRA:            pmra,
+			ProperMotionDec:           pmdec,
+			Parallax:                  parallax,
+			PhotometricGMeanFlux:      flux,
+			PhotometricGMeanMagnitude: mag,
+		}
+
+		// Append the source star to the array:
+		stars = append(stars, star)
+	}
+
+	// Convert string fields to float64 for RA, Dec, and Magnitude:
+	for i, star := range stars {
+		ra, err := strconv.ParseFloat(fmt.Sprintf("%v", star.RA), 64)
+		if err != nil {
+			continue
+		}
+
+		dec, err := strconv.ParseFloat(fmt.Sprintf("%v", star.Dec), 64)
+		if err != nil {
+			continue
+		}
+
+		mag, err := strconv.ParseFloat(fmt.Sprintf("%v", star.PhotometricGMeanMagnitude), 64)
+		if err != nil {
+			continue
+		}
+
+		stars[i].RA = ra
+		stars[i].Dec = dec
+		stars[i].PhotometricGMeanMagnitude = mag
+	}
+
+	// Return the extracted source star data:
+	return stars, nil
 }
 
 /*****************************************************************************************************************/
