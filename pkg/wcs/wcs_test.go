@@ -10,7 +10,9 @@ package wcs
 
 /*****************************************************************************************************************/
 
-import "testing"
+import (
+	"testing"
+)
 
 /*****************************************************************************************************************/
 
@@ -56,6 +58,31 @@ func TestNewWCS(t *testing.T) {
 
 	if wcs.CD2_2 != 0 {
 		t.Errorf("CD2_2 not set correctly")
+	}
+}
+
+/*****************************************************************************************************************/
+
+func TestPixelToEquatorialCoordinate(t *testing.T) {
+	wcs := WCS{
+		CRPIX1: 0,
+		CRPIX2: 0,
+		CRVAL1: 180,
+		CRVAL2: 0,
+		CD1_1:  1,
+		CD1_2:  0,
+		CD2_1:  0,
+		CD2_2:  1,
+	}
+
+	coordinate := wcs.PixelToEquatorialCoordinate(0, 0)
+
+	if coordinate.RA != 180 {
+		t.Errorf("RA not calculated correctly")
+	}
+
+	if coordinate.Dec != 0 {
+		t.Errorf("Dec not calculated correctly")
 	}
 }
 
