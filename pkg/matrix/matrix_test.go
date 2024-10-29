@@ -14,6 +14,17 @@ import "testing"
 
 /*****************************************************************************************************************/
 
+// floatEquals checks if two float64 numbers are equal within a specified tolerance.
+func floatEquals(a, b, tolerance float64) bool {
+	if a > b {
+		return a-b <= tolerance
+	}
+
+	return b-a <= tolerance
+}
+
+/*****************************************************************************************************************/
+
 // equalMatrices checks if two matrices are equal in dimensions and values.
 func equalMatrices(a, b *Matrix) bool {
 	if a.rows != b.rows || a.columns != b.columns {
@@ -540,6 +551,383 @@ func TestMatrixTransposeVerifyOriginalUnchanged(t *testing.T) {
 
 	if !equalMatrices(&original, &originalCopy) {
 		t.Errorf("Original matrix was modified after Transpose()\nGot: %+v\nWant: %+v", original, originalCopy)
+	}
+}
+
+/*****************************************************************************************************************/
+
+// TestMultiplySquareMatrices verifies that multiplying two square matrices yields the correct product.
+func TestMultiplySquareMatrices(t *testing.T) {
+	a := Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{1, 2, 3, 4},
+	}
+
+	b := Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{5, 6, 7, 8},
+	}
+
+	expected := &Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{19, 22, 43, 50},
+	}
+
+	product, err := a.Multiply(&b)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(product, expected) {
+		t.Errorf("Multiply() = %+v; want %+v", product, expected)
+	}
+}
+
+// TestMultiplyRectangularMatrices verifies that multiplying rectangular matrices yields the correct product.
+func TestMultiplyRectangularMatrices(t *testing.T) {
+	a := Matrix{
+		rows:    2,
+		columns: 3,
+		Value:   []float64{1, 2, 3, 4, 5, 6},
+	}
+
+	b := Matrix{
+		rows:    3,
+		columns: 2,
+		Value:   []float64{7, 8, 9, 10, 11, 12},
+	}
+
+	expected := &Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{58, 64, 139, 154},
+	}
+
+	product, err := a.Multiply(&b)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(product, expected) {
+		t.Errorf("Multiply() = %+v; want %+v", product, expected)
+	}
+}
+
+// TestMultiplySingleElementMatrices verifies that multiplying single-element matrices yields the correct product.
+func TestMultiplySingleElementMatrices(t *testing.T) {
+	a := Matrix{
+		rows:    1,
+		columns: 1,
+		Value:   []float64{2},
+	}
+
+	b := Matrix{
+		rows:    1,
+		columns: 1,
+		Value:   []float64{3},
+	}
+
+	expected := &Matrix{
+		rows:    1,
+		columns: 1,
+		Value:   []float64{6},
+	}
+
+	product, err := a.Multiply(&b)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(product, expected) {
+		t.Errorf("Multiply() = %+v; want %+v", product, expected)
+	}
+}
+
+// TestMultiplyWithIdentityMatrix verifies that multiplying with an identity matrix returns the original matrix.
+func TestMultiplyWithIdentityMatrix(t *testing.T) {
+	a := Matrix{
+		rows:    3,
+		columns: 3,
+		Value:   []float64{1, 2, 3, 4, 5, 6, 7, 8, 9},
+	}
+
+	identity := Matrix{
+		rows:    3,
+		columns: 3,
+		Value:   []float64{1, 0, 0, 0, 1, 0, 0, 0, 1},
+	}
+
+	expected := &Matrix{
+		rows:    3,
+		columns: 3,
+		Value:   []float64{1, 2, 3, 4, 5, 6, 7, 8, 9},
+	}
+
+	product, err := a.Multiply(&identity)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(product, expected) {
+		t.Errorf("Multiply() with identity matrix = %+v; want %+v", product, expected)
+	}
+}
+
+// TestMultiplyWithZeroMatrix verifies that multiplying with a zero matrix yields a zero matrix.
+func TestMultiplyWithZeroMatrix(t *testing.T) {
+	a := Matrix{
+		rows:    2,
+		columns: 3,
+		Value:   []float64{1, 2, 3, 4, 5, 6},
+	}
+
+	zero := Matrix{
+		rows:    3,
+		columns: 2,
+		Value:   []float64{0, 0, 0, 0, 0, 0},
+	}
+
+	expected := &Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{0, 0, 0, 0},
+	}
+
+	product, err := a.Multiply(&zero)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(product, expected) {
+		t.Errorf("Multiply() with zero matrix = %+v; want %+v", product, expected)
+	}
+}
+
+// TestMultiplyDimensionMismatch verifies that multiplying matrices with incompatible dimensions returns an error.
+func TestMultiplyDimensionMismatch(t *testing.T) {
+	a := Matrix{
+		rows:    2,
+		columns: 3,
+		Value:   []float64{1, 2, 3, 4, 5, 6},
+	}
+
+	b := Matrix{
+		rows:    4,
+		columns: 2,
+		Value:   []float64{7, 8, 9, 10, 11, 12, 13, 14},
+	}
+
+	_, err := a.Multiply(&b)
+	if err == nil {
+		t.Fatalf("Multiply() expected error due to dimension mismatch, got nil")
+	}
+}
+
+// TestMultiplyTwice verifies that multiplying a matrix by itself yields the correct result.
+func TestMultiplyTwice(t *testing.T) {
+	a := Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{1, 2, 3, 4},
+	}
+
+	expected := &Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{7, 10, 15, 22},
+	}
+
+	product, err := a.Multiply(&a)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(product, expected) {
+		t.Errorf("Multiply() squared = %+v; want %+v", product, expected)
+	}
+}
+
+// TestMultiplyWithNegativeValues verifies that multiplying matrices with negative values works correctly.
+func TestMultiplyWithNegativeValues(t *testing.T) {
+	a := Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{1, -2, -3, 4},
+	}
+
+	b := Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{-5, 6, 7, -8},
+	}
+
+	expected := &Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{-19, 22, 43, -50},
+	}
+
+	product, err := a.Multiply(&b)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(product, expected) {
+		t.Errorf("Multiply() with negative values = %+v; want %+v", product, expected)
+	}
+}
+
+// TestMultiplyWithNonIntegerValues verifies that multiplying matrices with non-integer values works correctly.
+func TestMultiplyWithNonIntegerValues(t *testing.T) {
+	a := Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{1.5, 2.5, 3.5, 4.5},
+	}
+
+	b := Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{5.5, 6.5, 7.5, 8.5},
+	}
+
+	expected, err := NewFromSlice(
+		[]float64{1.5*5.5 + 2.5*7.5, 1.5*6.5 + 2.5*8.5, 3.5*5.5 + 4.5*7.5, 3.5*6.5 + 4.5*8.5},
+		int(2),
+		int(2),
+	)
+
+	if err != nil {
+		t.Fatalf("NewFromSlice() returned unexpected error: %v", err)
+	}
+
+	product, err := a.Multiply(&b)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	tolerance := 1e-9
+	for i := 0; i < len(expected.Value); i++ {
+		if !floatEquals(product.Value[i], expected.Value[i], tolerance) {
+			t.Errorf("Multiply()[%d] = %v; want %v", i, product.Value[i], expected.Value[i])
+		}
+	}
+}
+
+// TestMultiplyImmutableOriginals ensures that the original matrices remain unchanged after multiplication.
+func TestMultiplyImmutableOriginals(t *testing.T) {
+	a := Matrix{
+		rows:    2,
+		columns: 3,
+		Value:   []float64{1, 2, 3, 4, 5, 6},
+	}
+
+	b := Matrix{
+		rows:    3,
+		columns: 2,
+		Value:   []float64{7, 8, 9, 10, 11, 12},
+	}
+
+	aCopy := Matrix{
+		rows:    a.rows,
+		columns: a.columns,
+		Value:   append([]float64(nil), a.Value...),
+	}
+
+	bCopy := Matrix{
+		rows:    b.rows,
+		columns: b.columns,
+		Value:   append([]float64(nil), b.Value...),
+	}
+
+	_, err := a.Multiply(&b)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(&a, &aCopy) {
+		t.Errorf("Matrix A was modified after Multiply()\nGot: %+v\nWant: %+v", a, aCopy)
+	}
+
+	if !equalMatrices(&b, &bCopy) {
+		t.Errorf("Matrix B was modified after Multiply()\nGot: %+v\nWant: %+v", b, bCopy)
+	}
+}
+
+// TestMultiplyWithNegativeDimensions verifies that multiplying matrices with negative dimensions is handled appropriately.
+func TestMultiplyWithNegativeDimensions(t *testing.T) {
+	// Attempt to create a matrix with negative rows
+	_, err := New(-1, 2)
+	if err == nil {
+		t.Fatalf("New() expected error due to negative rows, got nil")
+	}
+
+	// Attempt to create a matrix with negative columns
+	_, err = New(2, -3)
+	if err == nil {
+		t.Fatalf("New() expected error due to negative columns, got nil")
+	}
+
+	// Initialize valid matrices
+	a := Matrix{
+		rows:    2,
+		columns: 3,
+		Value:   []float64{1, 2, 3, 4, 5, 6},
+	}
+
+	b := Matrix{
+		rows:    3,
+		columns: 2,
+		Value:   []float64{7, 8, 9, 10, 11, 12},
+	}
+
+	// Perform multiplication (should work)
+	product, err := a.Multiply(&b)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	expected := &Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{58, 64, 139, 154},
+	}
+
+	if !equalMatrices(product, expected) {
+		t.Errorf("Multiply() = %+v; want %+v", product, expected)
+	}
+}
+
+// TestMultiplyWithNonSquareMatrices verifies that multiplying non-square matrices yields the correct product.
+func TestMultiplyWithNonSquareMatrices(t *testing.T) {
+	a := Matrix{
+		rows:    3,
+		columns: 2,
+		Value:   []float64{1, 2, 3, 4, 5, 6},
+	}
+
+	b := Matrix{
+		rows:    2,
+		columns: 4,
+		Value:   []float64{7, 8, 9, 10, 11, 12, 13, 14},
+	}
+
+	expected := &Matrix{
+		rows:    3,
+		columns: 4,
+		Value:   []float64{29, 32, 35, 38, 65, 72, 79, 86, 101, 112, 123, 134},
+	}
+
+	product, err := a.Multiply(&b)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(product, expected) {
+		t.Errorf("Multiply() with non-square matrices = %+v; want %+v", product, expected)
 	}
 }
 

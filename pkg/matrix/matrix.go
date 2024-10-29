@@ -128,3 +128,31 @@ func (m *Matrix) Transpose() (*Matrix, error) {
 }
 
 /*****************************************************************************************************************/
+
+// Multiply performs matrix multiplication between m and other.
+// Returns a new matrix as the product.
+// Requires m.columns == other.rows.
+func (m *Matrix) Multiply(other *Matrix) (*Matrix, error) {
+	if m.columns != other.rows {
+		return nil, fmt.Errorf("cannot multiply: %dx%d with %dx%d", m.rows, m.columns, other.rows, other.columns)
+	}
+
+	result, err := New(m.rows, other.columns)
+	if err != nil {
+		return nil, err
+	}
+
+	for r := 0; r < m.rows; r++ {
+		for c := 0; c < other.columns; c++ {
+			sum := 0.0
+			for k := 0; k < m.columns; k++ {
+				sum += m.Value[r*m.columns+k] * other.Value[k*other.columns+c]
+			}
+			result.Value[r*other.columns+c] = sum
+		}
+	}
+
+	return result, nil
+}
+
+/*****************************************************************************************************************/
