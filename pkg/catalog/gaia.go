@@ -41,6 +41,9 @@ type GAIAServiceClient struct {
 
 /*****************************************************************************************************************/
 
+// Gaia DR3 service handler. The five-parameter astrometric solution, positions on the sky (α, δ),
+// parallaxes, and proper motions, are given for around 1.46 billion sources, with a limiting magnitude
+// of G = 21.
 func NewGAIAServiceClient() *GAIAServiceClient {
 	return &GAIAServiceClient{
 		URI:   "https://gea.esac.esa.int/tap-server/tap/sync",
