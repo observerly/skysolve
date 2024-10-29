@@ -2,14 +2,17 @@
 
 ### Introduction
 
-observerly's performant, zero-dependency Go plate solving library for astronomical images.
+skysolve is a high-performance, zero-dependency Go library designed for plate solving astronomical images.
 
-Some plate solving algorithms start with a zero sum assumption of blindness to where in the Sky an image is representing. However, most observatories have a 
-rough idea of where they are pointing their telescopes. This library is designed to take advantage of that information to provide a faster, more accurate 
-plate solving solution.
+While many plate solving algorithms operate under the assumption of having no prior knowledge of an image’s location in the sky, most observatories typically have a rough estimate of where their telescopes are pointed. skysolve leverages this existing pointing information to deliver faster and more accurate plate solving solutions.
 
-Hence, when the approximate equatorial coordinates of a image and the detecotors' field of view is known, skysolve can be used to compute a World Coordinate 
-System (WCS) for the image. This is useful for astrometry, photometry, and other astronomical image processing tasks.
+When provided with the approximate equatorial coordinates of an image and the detector’s field of view, skysolve can compute a World Coordinate System (WCS) for the image in under a second. This efficiency makes it an excellent choice for tasks in astrometry, photometry, and other astronomical image processing applications that demand high performance, including Space Situational Awareness (SSA) and Space Domain Awareness (SDA).
+
+### Key Features
+
+- Zero Dependencies: Simplifies integration into your projects without the overhead of managing additional libraries.
+- High Performance: Optimized for speed, enabling real-time processing and analysis.
+- Accuracy: Utilizes prior pointing information to enhance the precision of plate solving.
 
 ---
 
