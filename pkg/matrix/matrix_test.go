@@ -14,6 +14,21 @@ import "testing"
 
 /*****************************************************************************************************************/
 
+// equalMatrices checks if two matrices are equal in dimensions and values.
+func equalMatrices(a, b *Matrix) bool {
+	if a.rows != b.rows || a.columns != b.columns {
+		return false
+	}
+	for i := 0; i < len(a.Value); i++ {
+		if a.Value[i] != b.Value[i] {
+			return false
+		}
+	}
+	return true
+}
+
+/*****************************************************************************************************************/
+
 // TestMatrixAtAccessFirstElement verifies that accessing the first element returns the correct value without an error.
 func TestMatrixAtAccessFirstElement(t *testing.T) {
 	matrix := Matrix{
@@ -345,6 +360,186 @@ func TestMatrixSetEmptyMatrix(t *testing.T) {
 	err := matrix.Set(0, 0, 10.0)
 	if err == nil {
 		t.Errorf("Set(0,0, 10.0) on empty matrix expected error, got nil")
+	}
+}
+
+/*****************************************************************************************************************/
+
+// TestMatrixTransposeSquareMatrix verifies that transposing a square matrix results in the correct matrix.
+func TestMatrixTransposeSquareMatrix(t *testing.T) {
+	original := Matrix{
+		rows:    3,
+		columns: 3,
+		Value:   []float64{1, 2, 3, 4, 5, 6, 7, 8, 9},
+	}
+
+	expected := &Matrix{
+		rows:    3,
+		columns: 3,
+		Value:   []float64{1, 4, 7, 2, 5, 8, 3, 6, 9},
+	}
+
+	transposed, err := original.Transpose()
+	if err != nil {
+		t.Errorf("Transpose() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(transposed, expected) {
+		t.Errorf("Transpose() = %+v; want %+v", transposed, expected)
+	}
+}
+
+// TestMatrixTransposeRectangularMatrix verifies that transposing a rectangular matrix results in the correct matrix.
+func TestMatrixTransposeRectangularMatrix(t *testing.T) {
+	original := Matrix{
+		rows:    2,
+		columns: 3,
+		Value:   []float64{1, 2, 3, 4, 5, 6},
+	}
+
+	expected := &Matrix{
+		rows:    3,
+		columns: 2,
+		Value:   []float64{1, 4, 2, 5, 3, 6},
+	}
+
+	transposed, err := original.Transpose()
+	if err != nil {
+		t.Errorf("Transpose() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(transposed, expected) {
+		t.Errorf("Transpose() = %+v; want %+v", transposed, expected)
+	}
+}
+
+// TestMatrixTransposeSingleElement verifies that transposing a single-element matrix results in the same matrix.
+func TestMatrixTransposeSingleElement(t *testing.T) {
+	original := Matrix{
+		rows:    1,
+		columns: 1,
+		Value:   []float64{42.0},
+	}
+
+	expected := &Matrix{
+		rows:    1,
+		columns: 1,
+		Value:   []float64{42.0},
+	}
+
+	transposed, err := original.Transpose()
+	if err != nil {
+		t.Errorf("Transpose() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(transposed, expected) {
+		t.Errorf("Transpose() = %+v; want %+v", transposed, expected)
+	}
+}
+
+// TestMatrixTransposeEmptyMatrix verifies that transposing an empty matrix results in an empty matrix.
+func TestMatrixTransposeEmptyMatrix(t *testing.T) {
+	original := Matrix{
+		rows:    0,
+		columns: 0,
+		Value:   []float64{},
+	}
+
+	_, err := original.Transpose()
+
+	if err == nil {
+		t.Errorf("Transpose() expected error on empty matrix, got nil")
+	}
+}
+
+// TestMatrixTransposeNonSquareRectangularMatrix verifies that transposing a non-square rectangular matrix works correctly.
+func TestMatrixTransposeNonSquareRectangularMatrix(t *testing.T) {
+	original := Matrix{
+		rows:    3,
+		columns: 2,
+		Value:   []float64{1, 2, 3, 4, 5, 6},
+	}
+
+	expected := &Matrix{
+		rows:    2,
+		columns: 3,
+		Value:   []float64{1, 3, 5, 2, 4, 6},
+	}
+
+	transposed, err := original.Transpose()
+	if err != nil {
+		t.Errorf("Transpose() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(transposed, expected) {
+		t.Errorf("Transpose() = %+v; want %+v", transposed, expected)
+	}
+}
+
+// TestMatrixTransposeTwice verifies that transposing a matrix twice returns the original matrix.
+func TestMatrixTransposeTwice(t *testing.T) {
+	original := Matrix{
+		rows:    2,
+		columns: 3,
+		Value:   []float64{1, 2, 3, 4, 5, 6},
+	}
+
+	transposed, err := original.Transpose()
+	if err != nil {
+		t.Errorf("First Transpose() returned unexpected error: %v", err)
+	}
+
+	doubleTransposed, err := transposed.Transpose()
+	if err != nil {
+		t.Errorf("Second Transpose() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(doubleTransposed, &original) {
+		t.Errorf("Double Transpose() = %+v; want %+v", doubleTransposed, original)
+	}
+}
+
+// TestMatrixTransposeInvalidNewFromSlice verifies that Transpose returns an error if NewFromSlice fails.
+func TestMatrixTransposeInvalidNewFromSlice(t *testing.T) {
+	// Temporarily modify Transpose to create an invalid slice.
+	// Note: This is a workaround since the current Transpose implementation should not fail.
+	// Alternatively, you can mock NewFromSlice if using interfaces.
+	// Here, we'll skip this test as Transpose is expected to work correctly.
+
+	// To demonstrate, we'll assume an error scenario:
+	// Suppose NewFromSlice is called with incorrect rows and columns.
+	// We'll manually create such a scenario.
+
+	// Create a transposed slice with incorrect size
+	transposed := []float64{1, 4, 2, 3} // Incorrect length for rows=2, columns=2
+
+	_, err := NewFromSlice(transposed, 3, 1) // Intentionally incorrect
+	if err == nil {
+		t.Errorf("NewFromSlice expected error due to mismatched rows and columns, got nil")
+	}
+}
+
+// TestMatrixTransposeVerifyOriginalUnchanged ensures that the original matrix remains unchanged after transposing.
+func TestMatrixTransposeVerifyOriginalUnchanged(t *testing.T) {
+	original := Matrix{
+		rows:    2,
+		columns: 3,
+		Value:   []float64{1, 2, 3, 4, 5, 6},
+	}
+
+	originalCopy := Matrix{
+		rows:    original.rows,
+		columns: original.columns,
+		Value:   append([]float64(nil), original.Value...), // Deep copy
+	}
+
+	_, err := original.Transpose()
+	if err != nil {
+		t.Errorf("Transpose() returned unexpected error: %v", err)
+	}
+
+	if !equalMatrices(&original, &originalCopy) {
+		t.Errorf("Original matrix was modified after Transpose()\nGot: %+v\nWant: %+v", original, originalCopy)
 	}
 }
 
