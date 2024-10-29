@@ -73,3 +73,17 @@ func NewFromSlice(value []float64, rows, columns int) (*Matrix, error) {
 }
 
 /*****************************************************************************************************************/
+
+// Rows returns the number of rows in the matrix.
+func (m *Matrix) Rows() int {
+	return m.rows
+}
+
+/*****************************************************************************************************************/
+
+// Columns returns the number of columns in the matrix.
+func (m *Matrix) Columns() int {
+	return m.columns
+}
+
+/*****************************************************************************************************************/
