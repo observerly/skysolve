@@ -20,6 +20,7 @@ import (
 /*****************************************************************************************************************/
 
 type WCS struct {
+	WCAXES int     `hdu:"WCAXES" default:"2"`        // Number of world coordinate axes
 	CRPIX1 float64 `hdu:"CRPIX1"`                    // Reference pixel X
 	CRPIX2 float64 `hdu:"CRPIX2"`                    // Reference pixel Y
 	CRVAL1 float64 `hdu:"CRVAL1" default:"0.0"`      // Reference RA (example default, often specific to image)
@@ -43,6 +44,7 @@ type WCS struct {
 func NewWorldCoordinateSystem(xc float64, yc float64, params transform.Affine2DParameters) WCS {
 	// Create a new WCS object:
 	wcs := WCS{
+		WCAXES: 2, // We always assume two world coordinate axes, RA and Dec.
 		CRPIX1: float64(xc),
 		CRPIX2: float64(yc),
 		CRVAL1: 0,
