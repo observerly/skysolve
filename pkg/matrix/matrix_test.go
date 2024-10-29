@@ -10,7 +10,10 @@ package matrix
 
 /*****************************************************************************************************************/
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 /*****************************************************************************************************************/
 
@@ -36,6 +39,36 @@ func equalMatrices(a, b *Matrix) bool {
 		}
 	}
 	return true
+}
+
+/*****************************************************************************************************************/
+
+// Helper function to compare two matrices for equality with a tolerance for floating-point precision.
+// It provides detailed error messages for discrepancies.
+func equalMatricesDetailed(a, b *Matrix, t *testing.T) bool {
+	if a == nil || b == nil {
+		if a != b {
+			t.Errorf("One of the matrices is nil while the other is not")
+			return false
+		}
+		return true
+	}
+	if a.rows != b.rows || a.columns != b.columns {
+		t.Errorf("Matrix dimensions do not match: got %dx%d, want %dx%d", a.rows, a.columns, b.rows, b.columns)
+		return false
+	}
+	tolerance := 1e-9
+	pass := true
+	for i := 0; i < len(a.Value); i++ {
+		diff := math.Abs(a.Value[i] - b.Value[i])
+		if diff > tolerance {
+			row := i / a.columns
+			col := i % a.columns
+			t.Errorf("Matrix element [%d][%d] = %v; want %v (diff %v)", row, col, a.Value[i], b.Value[i], diff)
+			pass = false
+		}
+	}
+	return pass
 }
 
 /*****************************************************************************************************************/
@@ -928,6 +961,371 @@ func TestMultiplyWithNonSquareMatrices(t *testing.T) {
 
 	if !equalMatrices(product, expected) {
 		t.Errorf("Multiply() with non-square matrices = %+v; want %+v", product, expected)
+	}
+}
+
+/*****************************************************************************************************************/
+
+// TestInvertSquareMatrix verifies that inverting a simple 2x2 square matrix yields the correct inverse.
+func TestInvertSquareMatrix(t *testing.T) {
+	a := Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{1, 2, 3, 4},
+	}
+
+	expectedInverse := &Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{-2, 1, 1.5, -0.5},
+	}
+
+	inv, err := a.Invert()
+	if err != nil {
+		t.Fatalf("Invert() returned unexpected error: %v", err)
+	}
+
+	if !equalMatricesDetailed(inv, expectedInverse, t) {
+		t.Errorf("Invert() = %+v; want %+v", inv, expectedInverse)
+	}
+
+	// Verify that A * A_inverse = Identity matrix
+	identity, err := a.Multiply(inv)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	expectedIdentity := &Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{1, 0, 0, 1},
+	}
+
+	if !equalMatricesDetailed(identity, expectedIdentity, t) {
+		t.Errorf("A * A_inverse = %+v; want %+v", identity, expectedIdentity)
+	}
+}
+
+// TestInvertIdentityMatrix verifies that inverting the identity matrix returns the identity matrix itself.
+func TestInvertIdentityMatrix(t *testing.T) {
+	identity := Matrix{
+		rows:    3,
+		columns: 3,
+		Value: []float64{
+			1, 0, 0,
+			0, 1, 0,
+			0, 0, 1,
+		},
+	}
+
+	expectedInverse := &Matrix{
+		rows:    3,
+		columns: 3,
+		Value: []float64{
+			1, 0, 0,
+			0, 1, 0,
+			0, 0, 1,
+		},
+	}
+
+	inv, err := identity.Invert()
+	if err != nil {
+		t.Fatalf("Invert() returned unexpected error: %v", err)
+	}
+
+	if !equalMatricesDetailed(inv, expectedInverse, t) {
+		t.Errorf("Invert() = %+v; want %+v", inv, expectedInverse)
+	}
+
+	// Verify that A * A_inverse = Identity matrix
+	identityResult, err := identity.Multiply(inv)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	if !equalMatricesDetailed(identityResult, expectedInverse, t) {
+		t.Errorf("A * A_inverse = %+v; want %+v", identityResult, expectedInverse)
+	}
+}
+
+// TestInvertSingularMatrix verifies that attempting to invert a singular matrix returns an appropriate error.
+func TestInvertSingularMatrix(t *testing.T) {
+	singular := Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{1, 2, 2, 4},
+	}
+
+	_, err := singular.Invert()
+	if err == nil {
+		t.Fatalf("Invert() expected error for singular matrix, got nil")
+	}
+
+	expectedErr := "matrix is singular and cannot be inverted"
+	if err.Error() != expectedErr {
+		t.Errorf("Invert() error = %v; want '%s'", err, expectedErr)
+	}
+}
+
+// TestInvertLargerMatrix verifies that inverting a larger 3x3 matrix yields the correct inverse.
+func TestInvertLargerMatrix(t *testing.T) {
+	a := Matrix{
+		rows:    3,
+		columns: 3,
+		Value: []float64{
+			4, 7, 2,
+			3, 6, 1,
+			2, 5, 1,
+		},
+	}
+
+	expectedInverse := &Matrix{
+		rows:    3,
+		columns: 3,
+		Value: []float64{
+			0.3333333333333333, 1, -1.6666666666666667,
+			-0.3333333333333333, 0, 0.6666666666666666,
+			1, -2, 1,
+		},
+	}
+
+	inv, err := a.Invert()
+	if err != nil {
+		t.Fatalf("Invert() returned unexpected error: %v", err)
+	}
+
+	if !equalMatricesDetailed(inv, expectedInverse, t) {
+		t.Errorf("Invert() = %+v; want %+v", inv, expectedInverse)
+	}
+
+	// Verify that A * A_inverse = Identity matrix
+	identity, err := a.Multiply(inv)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	expectedIdentity := &Matrix{
+		rows:    3,
+		columns: 3,
+		Value: []float64{
+			1, 0, 0,
+			0, 1, 0,
+			0, 0, 1,
+		},
+	}
+
+	if !equalMatricesDetailed(identity, expectedIdentity, t) {
+		t.Errorf("A * A_inverse = %+v; want %+v", identity, expectedIdentity)
+	}
+}
+
+// TestInvertWithFloatingPointValues verifies that inverting a matrix with floating-point values works correctly.
+func TestInvertWithFloatingPointValues(t *testing.T) {
+	a := Matrix{
+		rows:    3,
+		columns: 3,
+		Value: []float64{
+			6, 24, 1,
+			13, 42, 5,
+			3, 6, 1,
+		},
+	}
+
+	expectedInverse := &Matrix{
+		rows:    3,
+		columns: 3,
+		Value: []float64{
+			0.16666666666666666, -0.25, 1.0833333333333333,
+			0.027777777777777776, 0.041666666666666664, -0.2361111111111111,
+			-0.6666666666666666, 0.5, -0.8333333333333334,
+		},
+	}
+
+	inv, err := a.Invert()
+	if err != nil {
+		t.Fatalf("Invert() returned unexpected error: %v", err)
+	}
+
+	if !equalMatricesDetailed(inv, expectedInverse, t) {
+		t.Errorf("Invert() = %+v; want %+v", inv, expectedInverse)
+	}
+
+	// Verify that A * A_inverse = Identity matrix
+	identity, err := a.Multiply(inv)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	expectedIdentity := &Matrix{
+		rows:    3,
+		columns: 3,
+		Value: []float64{
+			1, 0, 0,
+			0, 1, 0,
+			0, 0, 1,
+		},
+	}
+
+	if !equalMatricesDetailed(identity, expectedIdentity, t) {
+		t.Errorf("A * A_inverse = %+v; want %+v", identity, expectedIdentity)
+	}
+}
+
+// TestInvertSingleElementMatrix verifies that inverting a single-element matrix yields the correct inverse.
+func TestInvertSingleElementMatrix(t *testing.T) {
+	a := Matrix{
+		rows:    1,
+		columns: 1,
+		Value:   []float64{4},
+	}
+
+	expectedInverse := &Matrix{
+		rows:    1,
+		columns: 1,
+		Value:   []float64{0.25},
+	}
+
+	inv, err := a.Invert()
+	if err != nil {
+		t.Fatalf("Invert() returned unexpected error: %v", err)
+	}
+
+	if !equalMatricesDetailed(inv, expectedInverse, t) {
+		t.Errorf("Invert() = %+v; want %+v", inv, expectedInverse)
+	}
+
+	// Verify that A * A_inverse = Identity matrix
+	identity, err := a.Multiply(inv)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	expectedIdentity := &Matrix{
+		rows:    1,
+		columns: 1,
+		Value:   []float64{1},
+	}
+
+	if !equalMatricesDetailed(identity, expectedIdentity, t) {
+		t.Errorf("A * A_inverse = %+v; want %+v", identity, expectedIdentity)
+	}
+}
+
+// TestInvertImmutableMatrix ensures that the original matrix remains unchanged after inversion.
+func TestInvertImmutableMatrix(t *testing.T) {
+	a := Matrix{
+		rows:    2,
+		columns: 2,
+		Value:   []float64{1, 2, 3, 4},
+	}
+
+	aCopy := Matrix{
+		rows:    a.rows,
+		columns: a.columns,
+		Value:   append([]float64(nil), a.Value...),
+	}
+
+	_, err := a.Invert()
+	if err != nil {
+		t.Fatalf("Invert() returned unexpected error: %v", err)
+	}
+
+	if !equalMatricesDetailed(&a, &aCopy, t) {
+		t.Errorf("Matrix A was modified after Invert()\nGot: %+v\nWant: %+v", a, aCopy)
+	}
+}
+
+// TestInvertNonSquareMatrix verifies that attempting to invert a non-square matrix returns an appropriate error.
+func TestInvertNonSquareMatrix(t *testing.T) {
+	nonSquare := Matrix{
+		rows:    2,
+		columns: 3,
+		Value:   []float64{1, 2, 3, 4, 5, 6},
+	}
+
+	_, err := nonSquare.Invert()
+	if err == nil {
+		t.Fatalf("Invert() expected error for non-square matrix, got nil")
+	}
+
+	expectedErr := "only square matrices can be inverted"
+	if err.Error() != expectedErr {
+		t.Errorf("Invert() error = %v; want '%s'", err, expectedErr)
+	}
+}
+
+// TestInvertAnotherSingularMatrix verifies that another singular matrix returns an appropriate error upon inversion.
+func TestInvertAnotherSingularMatrix(t *testing.T) {
+	singular := Matrix{
+		rows:    3,
+		columns: 3,
+		Value: []float64{
+			2, 4, 2,
+			4, 8, 4,
+			1, 2, 1,
+		},
+	}
+
+	_, err := singular.Invert()
+	if err == nil {
+		t.Fatalf("Invert() expected error for singular matrix, got nil")
+	}
+
+	expectedErr := "matrix is singular and cannot be inverted"
+	if err.Error() != expectedErr {
+		t.Errorf("Invert() error = %v; want '%s'", err, expectedErr)
+	}
+}
+
+// TestInvertFloatingPointMatrix verifies that inverting a 3x3 matrix with floating-point values works correctly.
+func TestInvertFloatingPointMatrix(t *testing.T) {
+	a := Matrix{
+		rows:    3,
+		columns: 3,
+		Value: []float64{
+			6, 24, 1,
+			13, 42, 5,
+			3, 6, 1,
+		},
+	}
+
+	expectedInverse := &Matrix{
+		rows:    3,
+		columns: 3,
+		Value: []float64{
+			0.16666666666666666, -0.25, 1.0833333333333333,
+			0.027777777777777776, 0.041666666666666664, -0.2361111111111111,
+			-0.6666666666666666, 0.5, -0.8333333333333334,
+		},
+	}
+
+	inv, err := a.Invert()
+	if err != nil {
+		t.Fatalf("Invert() returned unexpected error: %v", err)
+	}
+
+	if !equalMatricesDetailed(inv, expectedInverse, t) {
+		t.Errorf("Invert() = %+v; want %+v", inv, expectedInverse)
+	}
+
+	// Verify that A * A_inverse = Identity matrix
+	identity, err := a.Multiply(inv)
+	if err != nil {
+		t.Fatalf("Multiply() returned unexpected error: %v", err)
+	}
+
+	expectedIdentity := &Matrix{
+		rows:    3,
+		columns: 3,
+		Value: []float64{
+			1, 0, 0,
+			0, 1, 0,
+			0, 0, 1,
+		},
+	}
+
+	if !equalMatricesDetailed(identity, expectedIdentity, t) {
+		t.Errorf("A * A_inverse = %+v; want %+v", identity, expectedIdentity)
 	}
 }
 

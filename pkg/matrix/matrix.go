@@ -13,6 +13,7 @@ package matrix
 import (
 	"errors"
 	"fmt"
+	"math"
 )
 
 /*****************************************************************************************************************/
@@ -153,6 +154,78 @@ func (m *Matrix) Multiply(other *Matrix) (*Matrix, error) {
 	}
 
 	return result, nil
+}
+
+/*****************************************************************************************************************/
+
+// Invert returns the inverse of the matrix using Gaussian elimination. Only square matrices can be inverted.
+func (m *Matrix) Invert() (*Matrix, error) {
+	// Check if the matrix is square, i.e., the number of rows is equal to the number of columns:
+	if m.rows != m.columns {
+		return nil, errors.New("only square matrices can be inverted")
+	}
+
+	n := m.rows
+
+	// Create an augmented matrix [A | I] to store the inverse matrix:
+	augmented := make([][]float64, n)
+
+	for i := 0; i < n; i++ {
+		augmented[i] = make([]float64, 2*n)
+		for j := 0; j < n; j++ {
+			augmented[i][j] = m.Value[i*m.columns+j]
+		}
+		augmented[i][n+i] = 1.0
+	}
+
+	// Perform Gaussian elimination with partial pivoting:
+	for i := 0; i < n; i++ {
+		// Find the pivot row with the maximum absolute value:
+		maxRow := i
+
+		maxVal := math.Abs(augmented[i][i])
+
+		for k := i + 1; k < n; k++ {
+			if math.Abs(augmented[k][i]) > maxVal {
+				maxRow = k
+				maxVal = math.Abs(augmented[k][i])
+			}
+		}
+
+		if maxVal == 0 {
+			return nil, errors.New("matrix is singular and cannot be inverted")
+		}
+
+		// Swap with the pivot row if necessary:
+		augmented[i], augmented[maxRow] = augmented[maxRow], augmented[i]
+
+		// Normalize the pivot row by dividing by the pivot element:
+		pivot := augmented[i][i]
+		for j := 0; j < 2*n; j++ {
+			augmented[i][j] /= pivot
+		}
+
+		// Eliminate the other rows using the pivot row:
+		for k := 0; k < n; k++ {
+			if k == i {
+				continue
+			}
+			factor := augmented[k][i]
+			for j := 0; j < 2*n; j++ {
+				augmented[k][j] -= factor * augmented[i][j]
+			}
+		}
+	}
+
+	// Extract the inverse matrix
+	invData := make([]float64, n*n)
+	for i := 0; i < n; i++ {
+		for j := 0; j < n; j++ {
+			invData[i*n+j] = augmented[i][n+j]
+		}
+	}
+
+	return NewFromSlice(invData, n, n)
 }
 
 /*****************************************************************************************************************/
