@@ -113,3 +113,18 @@ func (m *Matrix) Set(row, col int, value float64) error {
 }
 
 /*****************************************************************************************************************/
+
+// Transpose returns a new matrix that is the transpose of the original matrix.
+func (m *Matrix) Transpose() (*Matrix, error) {
+	transposed := make([]float64, m.rows*m.columns)
+	for r := 0; r < m.rows; r++ {
+		for c := 0; c < m.columns; c++ {
+			transposed[c*m.rows+r] = m.Value[r*m.columns+c]
+		}
+	}
+
+	// Swap the number of rows and columns:
+	return NewFromSlice(transposed, m.columns, m.rows)
+}
+
+/*****************************************************************************************************************/
