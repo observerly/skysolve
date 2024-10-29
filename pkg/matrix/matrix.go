@@ -12,6 +12,7 @@ package matrix
 
 import (
 	"errors"
+	"fmt"
 )
 
 /*****************************************************************************************************************/
@@ -38,6 +39,36 @@ func New(rows, columns int) (*Matrix, error) {
 		rows:    rows,
 		columns: columns,
 		Value:   value,
+	}, nil
+}
+
+/*****************************************************************************************************************/
+
+// NewFromSlice creates a new matrix from a given slice.
+// The slice should have exactly rows*columns elements.
+func NewFromSlice(value []float64, rows, columns int) (*Matrix, error) {
+	// Check if the matrix dimensions are valid
+	if rows <= 0 || columns <= 0 {
+		return nil, errors.New("matrix dimensions must be positive")
+	}
+
+	length := len(value)
+
+	// Check if the data length matches the matrix dimensions
+	if length != rows*columns {
+		return nil, fmt.Errorf("length %d does not match matrix dimensions %dx%d", length, rows, columns)
+	}
+
+	// Create a copy to prevent external modifications
+	v := make([]float64, length)
+
+	// Copy the values from the given slice to the new matrix
+	copy(v, value)
+
+	return &Matrix{
+		rows:    rows,
+		columns: columns,
+		Value:   v,
 	}, nil
 }
 
