@@ -99,3 +99,17 @@ func (m *Matrix) At(row, col int) (float64, error) {
 }
 
 /*****************************************************************************************************************/
+
+// Set sets the element at the specified row and column to the given value.
+// Rows and columns are zero-indexed.
+func (m *Matrix) Set(row, col int, value float64) error {
+	if row < 0 || row >= m.rows || col < 0 || col >= m.columns {
+		return fmt.Errorf("index out of bounds: row=%d, col=%d", row, col)
+	}
+
+	m.Value[row*m.columns+col] = value
+
+	return nil
+}
+
+/*****************************************************************************************************************/
