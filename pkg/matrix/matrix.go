@@ -87,3 +87,15 @@ func (m *Matrix) Columns() int {
 }
 
 /*****************************************************************************************************************/
+
+// At returns the element at the specified row and column.
+// Rows and columns are zero-indexed.
+func (m *Matrix) At(row, col int) (float64, error) {
+	if row < 0 || row >= m.rows || col < 0 || col >= m.columns {
+		return 0, fmt.Errorf("index out of bounds: row=%d, col=%d", row, col)
+	}
+
+	return m.Value[row*m.columns+col], nil
+}
+
+/*****************************************************************************************************************/
