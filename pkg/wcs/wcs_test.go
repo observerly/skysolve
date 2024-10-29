@@ -11,7 +11,6 @@ package wcs
 /*****************************************************************************************************************/
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/observerly/skysolve/pkg/transform"
@@ -43,6 +42,30 @@ func TestNewWCS(t *testing.T) {
 
 	if wcs.CRVAL2 == 0 {
 		t.Errorf("CRVAL2 not set correctly")
+	}
+
+	if wcs.CUNIT1 != "deg" {
+		t.Errorf("CUNIT1 not set correctly")
+	}
+
+	if wcs.CUNIT2 != "deg" {
+		t.Errorf("CUNIT2 not set correctly")
+	}
+
+	if wcs.CDELT1 != 1 {
+		t.Errorf("CDELT1 not set correctly")
+	}
+
+	if wcs.CDELT2 != 1 {
+		t.Errorf("CDELT2 not set correctly")
+	}
+
+	if wcs.CTYPE1 != "RA---TAN" {
+		t.Errorf("CTYPE1 not set correctly")
+	}
+
+	if wcs.CTYPE2 != "DEC--TAN" {
+		t.Errorf("CTYPE2 not set correctly")
 	}
 
 	if wcs.CD1_1 != 1 {
@@ -77,8 +100,6 @@ func TestPixelToEquatorialCoordinate(t *testing.T) {
 	}
 
 	coordinate := wcs.PixelToEquatorialCoordinate(0, 0)
-
-	fmt.Println(coordinate)
 
 	if coordinate.RA != 280 {
 		t.Errorf("RA not calculated correctly")
