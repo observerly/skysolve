@@ -14,6 +14,26 @@ When provided with the approximate equatorial coordinates of an image and the de
 - High Performance: Optimized for speed, enabling real-time processing and analysis.
 - Accuracy: Utilizes prior pointing information to enhance the precision of plate solving.
 
+### Algorithm & Methodology
+
+#### Image Star Extraction
+
+The algorithm first extracts stars from the image using a star detection algorithm. The star detection algorithm identifies bright spots in the image that are likely to be stars. These spots are then used to extract the stars' positions and intensities.
+
+#### Catalog Matching
+
+The extracted stars are then matched against a reference catalog of stars. The reference catalog contains the positions and magnitudes of stars in the sky. The algorithm uses the positions of the stars in the image and the reference catalog to find the best match between the two sets of stars.
+
+#### Invariant Features
+
+The algorithm used for plate solving leverages the invariant properties of triangles. Specifically, triangles retain consistent features: the ratio of side lengths, which normalizes scale differences, and the angles, which remain unchanged by rotation, scaling, and translation. This algorithm compares the invariant features of triangles formed by various stars in the image against a reference catalog to accurately solve the plate.
+
+The accuracy of the solution improves with the number of stars detected in the image, and the probability of finding a solution increases with a larger catalog of reference sources.
+
+#### Affine Transformations
+
+The algorithm uses affine transformations to align the image with the reference catalog. Affine transformations are a class of linear transformations that preserve points, straight lines, and planes. The algorithm uses these transformations to rotate, scale, and translate the image to match the reference catalog.
+
 ---
 
 ### Special Acknowledgements
