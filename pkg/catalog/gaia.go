@@ -59,15 +59,16 @@ const record = `source_id, designation, ra, dec, pmra, pmdec, parallax, phot_g_m
 
 func (g *GAIAServiceClient) Build() (string, error) {
 	// Define the ADQL query template for the GAIA TAP service:
-	// @see https://gea.esac.esa.int/archive/documentation/GDR3/Gaia_archive/chap_datamodel/
+	// @see https://gea.esac.esa.int/archive/documentation/GDR2/Gaia_archive/chap_datamodel/
 	// N.B. (use only gold standard data, e.g., photometry processing mode (byte) i.e., phot_proc_mode = '0'):
 	const queryTemplate = `
-		SELECT {{.Record}}
-		FROM gaiadr3.gaia_source
+		SELECT TOP 100 {{.Record}}
+		FROM gaiadr2.gaia_source
 		WHERE CONTAINS(
 			POINT('ICRS', ra, dec),
 			CIRCLE('ICRS', {{.RA}}, {{.Dec}}, {{.Radius}})
 		) = 1 AND phot_g_mean_mag < {{.Limit}} AND phot_proc_mode = '0'
+		ORDER BY phot_rp_mean_flux DESC;
 	`
 
 	// Parse the ADQL query template:
