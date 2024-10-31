@@ -10,6 +10,12 @@ package catalog
 
 /*****************************************************************************************************************/
 
+import (
+	"github.com/observerly/skysolve/pkg/geometry"
+)
+
+/*****************************************************************************************************************/
+
 type Source struct {
 	UID                       string  `json:"uid" gaia:"source_id"`              // Source ID (unique)
 	Designation               string  `json:"designation" gaia:"designation"`    // Source Designation
@@ -25,9 +31,10 @@ type Source struct {
 /*****************************************************************************************************************/
 
 type SourceAsterism struct {
-	A Source
-	B Source
-	C Source
+	A        Source
+	B        Source
+	C        Source
+	Features geometry.InvariantFeatures
 }
 
 /*****************************************************************************************************************/
