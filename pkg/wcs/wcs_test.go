@@ -36,12 +36,12 @@ func TestNewWCS(t *testing.T) {
 		t.Errorf("CRPIX2 not set correctly")
 	}
 
-	if wcs.CRVAL1 == 0 {
-		t.Errorf("CRVAL1 not set correctly")
+	if wcs.CRVAL1 != 0 {
+		t.Errorf("CRVAL1 not set correctly, expected 0 got %v", wcs.CRVAL1)
 	}
 
-	if wcs.CRVAL2 == 0 {
-		t.Errorf("CRVAL2 not set correctly")
+	if wcs.CRVAL2 != 0 {
+		t.Errorf("CRVAL2 not set correctly, expected 0 got %v", wcs.CRVAL2)
 	}
 
 	if wcs.CUNIT1 != "deg" {
@@ -99,13 +99,13 @@ func TestPixelToEquatorialCoordinate(t *testing.T) {
 		CD2_2:  0.2,
 	}
 
-	coordinate := wcs.PixelToEquatorialCoordinate(0, 0)
+	coordinate := wcs.PixelToEquatorialCoordinate(100, 100)
 
-	if coordinate.RA != 280 {
+	if coordinate.RA != 220 {
 		t.Errorf("RA not calculated correctly")
 	}
 
-	if coordinate.Dec != 80 {
+	if coordinate.Dec != -40 {
 		t.Errorf("Dec not calculated correctly")
 	}
 }

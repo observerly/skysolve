@@ -88,13 +88,15 @@ func (wcs *WCS) SolveForCentroid() (coordinate astrometry.ICRSEquatorialCoordina
 func (wcs *WCS) PixelToEquatorialCoordinate(
 	x, y float64,
 ) (coordinate astrometry.ICRSEquatorialCoordinate) {
+	// Compute the offsets from the reference pixel
+	deltaX := x - wcs.CRPIX1 // Offset in X
+	deltaY := y - wcs.CRPIX2 // Offset in Y
+
 	// Calculate the reference equatorial coordinate for the right ascension:
-	ra := wcs.CD1_1*wcs.CRPIX1 + wcs.CD1_2*wcs.CRPIX2 + wcs.E
+	ra := wcs.CD1_1*deltaX + wcs.CD1_2*deltaY + wcs.E
 
 	// Correct for large values of RA:
-	if ra > 360 {
-		ra = math.Mod(ra, 360)
-	}
+	ra = math.Mod(ra, 360)
 
 	// Correct for negative values of RA:
 	if ra < 0 {
@@ -102,7 +104,7 @@ func (wcs *WCS) PixelToEquatorialCoordinate(
 	}
 
 	// Calculate the reference equatorial coordinate for the declination:
-	dec := wcs.CD2_1*wcs.CRPIX1 + wcs.CD2_2*wcs.CRPIX2 + wcs.F
+	dec := wcs.CD2_1*deltaX + wcs.CD2_2*deltaY + wcs.F
 
 	// Correct for large values of declination:
 	dec = math.Mod(dec, 90)
