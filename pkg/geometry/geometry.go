@@ -58,6 +58,13 @@ type InvariantFeatures struct {
 
 /*****************************************************************************************************************/
 
+type InvariantFeatureTolerance struct {
+	LengthRatio float64 // e.g., 0.01 for 1% difference
+	Angle       float64 // e.g., 0.5 for 0.5 degrees difference
+}
+
+/*****************************************************************************************************************/
+
 func ComputeInvariantFeatures(x1, y1, x2, y2, x3, y3 float64) (InvariantFeatures, error) {
 	// Compute side lengths of the triangle:
 	a := DistanceBetweenTwoCartesianPoints(x2, y2, x3, y3) // BC
@@ -91,6 +98,22 @@ func ComputeInvariantFeatures(x1, y1, x2, y2, x3, y3 float64) (InvariantFeatures
 		AngleA:  angleA,
 		AngleB:  angleB,
 	}, nil
+}
+
+/*****************************************************************************************************************/
+
+func CompareInvariantFeatures(f1, f2 InvariantFeatures, tolerance InvariantFeatureTolerance) bool {
+	// If the difference in the side ratios is greater than the tolerance, return false
+	if math.Abs(f1.RatioAB-f2.RatioAB) > tolerance.LengthRatio || math.Abs(f1.RatioAC-f2.RatioAC) > tolerance.LengthRatio {
+		return false
+	}
+
+	// If the difference in the angles is greater than the tolerance, return false
+	if math.Abs(f1.AngleA-f2.AngleA) > tolerance.Angle || math.Abs(f1.AngleB-f2.AngleB) > tolerance.Angle {
+		return false
+	}
+
+	return true
 }
 
 /*****************************************************************************************************************/

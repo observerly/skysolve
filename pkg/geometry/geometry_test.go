@@ -349,3 +349,75 @@ func TestComputeInvariantFeaturesScalefulTriangle(t *testing.T) {
 }
 
 /*****************************************************************************************************************/
+
+func TestCompareInvariantFeaturesWithinTolerance(t *testing.T) {
+	tolerance := InvariantFeatureTolerance{
+		LengthRatio: 0.01,
+		Angle:       0.5, // degrees
+	}
+
+	f1 := InvariantFeatures{RatioAB: 1.0, RatioAC: 1.0, AngleA: 30.0, AngleB: 60.0}
+	f2 := InvariantFeatures{RatioAB: 1.005, RatioAC: 0.995, AngleA: 30.3, AngleB: 59.7}
+
+	if !CompareInvariantFeatures(f1, f2, tolerance) {
+		t.Error("Expected true when differences are within tolerance")
+	}
+}
+
+func TestCompareInvariantFeaturesRatioABExceedsTolerance(t *testing.T) {
+	tolerance := InvariantFeatureTolerance{
+		LengthRatio: 0.01,
+		Angle:       0.5,
+	}
+
+	f1 := InvariantFeatures{RatioAB: 1.0, RatioAC: 1.0, AngleA: 30.0, AngleB: 60.0}
+	f2 := InvariantFeatures{RatioAB: 1.02, RatioAC: 1.0, AngleA: 30.0, AngleB: 60.0}
+
+	if CompareInvariantFeatures(f1, f2, tolerance) {
+		t.Error("Expected false when RatioAB difference exceeds tolerance")
+	}
+}
+
+func TestCompareInvariantFeaturesAngleAExceedsTolerance(t *testing.T) {
+	tolerance := InvariantFeatureTolerance{
+		LengthRatio: 0.01,
+		Angle:       0.5,
+	}
+
+	f1 := InvariantFeatures{RatioAB: 1.0, RatioAC: 1.0, AngleA: 30.0, AngleB: 60.0}
+	f2 := InvariantFeatures{RatioAB: 1.0, RatioAC: 1.0, AngleA: 30.6, AngleB: 60.0}
+
+	if CompareInvariantFeatures(f1, f2, tolerance) {
+		t.Error("Expected false when AngleA difference exceeds tolerance")
+	}
+}
+
+func TestCompareInvariantFeaturesExceedsToleranceBySmallMargin(t *testing.T) {
+	tolerance := InvariantFeatureTolerance{
+		LengthRatio: 0.01,
+		Angle:       0.5,
+	}
+
+	f1 := InvariantFeatures{RatioAB: 1.0, RatioAC: 1.0, AngleA: 30.0, AngleB: 60.0}
+	f2 := InvariantFeatures{RatioAB: 1.0101, RatioAC: 1.0, AngleA: 30.0, AngleB: 60.0}
+
+	if CompareInvariantFeatures(f1, f2, tolerance) {
+		t.Error("Expected false when differences just exceed tolerance")
+	}
+}
+
+func TestCompareInvariantFeaturesNegativeDifferencesWithinTolerance(t *testing.T) {
+	tolerance := InvariantFeatureTolerance{
+		LengthRatio: 0.01,
+		Angle:       0.5,
+	}
+
+	f1 := InvariantFeatures{RatioAB: 1.0, RatioAC: 1.0, AngleA: 30.0, AngleB: 60.0}
+	f2 := InvariantFeatures{RatioAB: 0.995, RatioAC: 0.995, AngleA: 29.7, AngleB: 59.7}
+
+	if !CompareInvariantFeatures(f1, f2, tolerance) {
+		t.Error("Expected true when negative differences are within tolerance")
+	}
+}
+
+/*****************************************************************************************************************/
