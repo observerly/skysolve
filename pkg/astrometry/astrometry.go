@@ -12,6 +12,7 @@ package astrometry
 
 import (
 	"github.com/observerly/iris/pkg/photometry"
+	"github.com/observerly/skysolve/pkg/geometry"
 )
 
 /*****************************************************************************************************************/
@@ -24,9 +25,10 @@ type ICRSEquatorialCoordinate struct {
 /*****************************************************************************************************************/
 
 type Asterism struct {
-	A photometry.Star
-	B photometry.Star
-	C photometry.Star
+	A        photometry.Star
+	B        photometry.Star
+	C        photometry.Star
+	Features geometry.InvariantFeatures
 }
 
 /*****************************************************************************************************************/
