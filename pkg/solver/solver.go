@@ -24,6 +24,7 @@ import (
 	"github.com/observerly/skysolve/pkg/catalog"
 	"github.com/observerly/skysolve/pkg/geometry"
 	"github.com/observerly/skysolve/pkg/projection"
+	"github.com/observerly/skysolve/pkg/utils"
 )
 
 /*****************************************************************************************************************/
@@ -343,6 +344,76 @@ func (ps *PlateSolver) MatchAsterismsWithCatalog(
 
 	// If no match is found, return an error
 	return nil, errors.New("no match found between asterism and source asterism")
+}
+
+/*****************************************************************************************************************/
+
+func (ps *PlateSolver) FindSourceMatches(tolerance geometry.InvariantFeatureTolerance) ([]Match, error) {
+	var (
+		asterisms       []astrometry.Asterism
+		sourceAsterisms []catalog.SourceAsterism
+	)
+
+	// Setup two wait groups for the sources lookup and the stars extractor:
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// Get the asterisms or triangulated stars from the image:
+	go func() {
+		defer wg.Done()
+		asterisms = ps.GenerateStarAsterisms()
+	}()
+
+	// Get the asterisms or triangulated sources from the catalog:
+	go func() {
+		defer wg.Done()
+		sourceAsterisms = ps.GenerateSourceAsterisms()
+	}()
+
+	wg.Wait()
+
+	// Define the precision for quantization, 4 seems to be a good value between being too
+	// specific and not specific enough:
+	precision := 4
+
+	// Create a map to index source triangles by their quantized invariant features:
+	sourceTriangleIndex := make(map[string][]catalog.SourceAsterism)
+
+	// Compute invariant features for source triangles and index them:
+	for _, source := range sourceAsterisms {
+		key := utils.QuantizeFeatures(source.Features, precision)
+		sourceTriangleIndex[key] = append(sourceTriangleIndex[key], source)
+	}
+
+	matches := make([]Match, 0)
+
+	for i, asterism := range asterisms {
+		// Quantize the asterism's features to create a key:
+		key := utils.QuantizeFeatures(asterism.Features, precision)
+
+		// Get the source triangles with the same invariant features, e.g. by looking for matching source
+		// triangles in the index:
+		if sources, found := sourceTriangleIndex[key]; found {
+			for _, source := range sources {
+				// Attempt to match the individual stars to sources in the catalog, using the star triangle and source triangle:
+				match, err := ps.MatchAsterismsWithCatalog(asterism, source, tolerance)
+
+				if err == nil && match != nil {
+					// Add the matches to the list of matches:
+					matches = append(matches, match...)
+				}
+			}
+		}
+
+		// If we have more than 32 matches, we can stop looking for more, this seems to be an optimal
+		// amount of matches to plate solve to a high degree of accuracy, this covers more than 30% of
+		// the total source count.
+		if len(matches) >= 32 && i < 40 {
+			break
+		}
+	}
+
+	return matches, nil
 }
 
 /*****************************************************************************************************************/
