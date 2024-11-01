@@ -12,6 +12,7 @@ package solver
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"sort"
 	"sync"
@@ -19,12 +20,16 @@ import (
 	"github.com/observerly/iris/pkg/fits"
 	"github.com/observerly/iris/pkg/photometry"
 	stats "github.com/observerly/iris/pkg/statistics"
+	iutils "github.com/observerly/iris/pkg/utils"
 
 	"github.com/observerly/skysolve/pkg/astrometry"
 	"github.com/observerly/skysolve/pkg/catalog"
 	"github.com/observerly/skysolve/pkg/geometry"
+	"github.com/observerly/skysolve/pkg/matrix"
 	"github.com/observerly/skysolve/pkg/projection"
+	"github.com/observerly/skysolve/pkg/transform"
 	"github.com/observerly/skysolve/pkg/utils"
+	"github.com/observerly/skysolve/pkg/wcs"
 )
 
 /*****************************************************************************************************************/
@@ -414,6 +419,112 @@ func (ps *PlateSolver) FindSourceMatches(tolerance geometry.InvariantFeatureTole
 	}
 
 	return matches, nil
+}
+
+/*****************************************************************************************************************/
+
+func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance) (*wcs.WCS, error) {
+	matches, err := ps.FindSourceMatches(tolerance)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(matches) < 3 {
+		return nil, errors.New("insufficient matches to perform plate solving")
+	}
+
+	n := 2 * len(matches)
+	A := make([][]float64, n)
+	B := make([]float64, n)
+
+	// Calculate the affine transformation matrix from the matches:
+	for i, match := range matches {
+		x := float64(match.Star.X)
+		y := float64(match.Star.Y)
+
+		ra := match.Source.RA
+		dec := match.Source.Dec
+
+		// Create the matrix A and vector B for the least squares method:
+		A[2*i] = []float64{x, y, 1, 0, 0, 0}
+		B[2*i] = ra
+		A[2*i+1] = []float64{0, 0, 0, x, y, 1}
+		B[2*i+1] = dec
+	}
+
+	// Convert A to a matrix:
+	a, err := matrix.NewFromSlice(iutils.Flatten2DFloat64Array(A), n, 6)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert B to a matrix:
+	b, err := matrix.NewFromSlice(B, n, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	// Compute A^T
+	aT, err := a.Transpose()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute A^T: %v", err)
+	}
+
+	// Compute A^T * A
+	aTa, err := aT.Multiply(a)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute A^T * A: %v", err)
+	}
+
+	// Compute A^T * B
+	aTb, err := aT.Multiply(b)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute A^T * B: %v", err)
+	}
+
+	// Compute the inverse of A^T * A
+	aTaInv, err := aTa.Invert()
+	if err != nil {
+		return nil, fmt.Errorf("failed to invert A^T * A: %v", err)
+	}
+
+	// Compute the affine transformation matrix parameters using the least squares method:
+	params := make([]float64, 6)
+	if aTaInv == nil || aTb == nil {
+		return nil, errors.New("failed to compute affine transformation matrix parameters")
+	}
+
+	// Calculate the affine transformation matrix parameters:
+	for i := 0; i < 6; i++ {
+		for j := 0; j < 6; j++ {
+			params[i] += aTaInv.Value[i*6+j] * aTb.Value[j]
+		}
+	}
+
+	// Calculate the x-coordinate of the center of the image:
+	x := float64(ps.Width) / 2
+
+	// Calculate the y-coordinate of the center of the image:
+	y := float64(ps.Height) / 2
+
+	// Now that we have the affine parameters, we can calculate the actual RA and dec coordinate
+	// for the center of the image:
+	t := wcs.NewWorldCoordinateSystem(
+		x,
+		y,
+		transform.Affine2DParameters{
+			A: params[0],
+			B: params[1],
+			C: params[3],
+			D: params[4],
+			E: params[2],
+			F: params[5],
+		},
+	)
+
+	return &t, nil
 }
 
 /*****************************************************************************************************************/
