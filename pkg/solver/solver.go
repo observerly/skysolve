@@ -221,3 +221,41 @@ func (ps *PlateSolver) GenerateStarAsterisms() []astrometry.Asterism {
 }
 
 /*****************************************************************************************************************/
+
+func (ps *PlateSolver) GenerateSourceAsterisms() []catalog.SourceAsterism {
+	triangles := []catalog.SourceAsterism{}
+
+	n := len(ps.Sources)
+
+	for i := 0; i < n-2; i++ {
+		for j := i + 1; j < n-1; j++ {
+			for k := j + 1; k < n; k++ {
+				sourceAsterism := catalog.SourceAsterism{
+					A: ps.Sources[i],
+					B: ps.Sources[j],
+					C: ps.Sources[k],
+				}
+
+				// Compute invariant features and store them
+				features, err := geometry.ComputeInvariantFeatures(
+					sourceAsterism.A.RA,
+					sourceAsterism.A.Dec,
+					sourceAsterism.B.RA,
+					sourceAsterism.B.Dec,
+					sourceAsterism.C.RA,
+					sourceAsterism.C.Dec,
+				)
+				if err != nil {
+					continue
+				}
+
+				sourceAsterism.Features = features
+
+				triangles = append(triangles, sourceAsterism)
+			}
+		}
+	}
+
+	return triangles
+}
+
