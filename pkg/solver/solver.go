@@ -259,3 +259,11 @@ func (ps *PlateSolver) GenerateSourceAsterisms() []catalog.SourceAsterism {
 	return triangles
 }
 
+/*****************************************************************************************************************/
+
+type Match struct {
+	Star   photometry.Star
+	Source catalog.Source
+}
+
+/*****************************************************************************************************************/
