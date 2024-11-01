@@ -8,6 +8,10 @@ While many plate solving algorithms operate under the assumption of having no pr
 
 When provided with the approximate equatorial coordinates of an image and the detector’s field of view, skysolve can compute a World Coordinate System (WCS) for the image in under a second. This efficiency makes it an excellent choice for tasks in astrometry, photometry, and other astronomical image processing applications that demand high performance, including Space Situational Awareness (SSA) and Space Domain Awareness (SDA).
 
+### Why SkySolve?
+
+Here at observerly, we love to write type-safe, memory-safe and performant code. We regard Go lang as giving us the code writing-efficiency of Python, with the performance of C, all with the type-safe assuredness of ... Go. We aim to make it easy for feature contributions, bug fixes and optimisations whilst not compromising on code performance. When utilised with Go's coroutines, this package can blind plate solve in less than a minute.
+
 ### Key Features
 
 - Zero Dependencies: Simplifies integration into your projects without the overhead of managing additional libraries.
