@@ -23,6 +23,7 @@ import (
 	"github.com/observerly/skysolve/pkg/astrometry"
 	"github.com/observerly/skysolve/pkg/catalog"
 	"github.com/observerly/skysolve/pkg/geometry"
+	"github.com/observerly/skysolve/pkg/projection"
 )
 
 /*****************************************************************************************************************/
@@ -264,6 +265,84 @@ func (ps *PlateSolver) GenerateSourceAsterisms() []catalog.SourceAsterism {
 type Match struct {
 	Star   photometry.Star
 	Source catalog.Source
+}
+
+/*****************************************************************************************************************/
+
+func (ps *PlateSolver) MatchAsterismsWithCatalog(
+	asterism astrometry.Asterism,
+	sourceAsterism catalog.SourceAsterism,
+	tolerance geometry.InvariantFeatureTolerance,
+) ([]Match, error) {
+	// Define the stars for the asterism:
+	stars := []photometry.Star{asterism.A, asterism.B, asterism.C}
+
+	// Define the sources for the source asterism:
+	sources := []catalog.Source{sourceAsterism.A, sourceAsterism.B, sourceAsterism.C}
+
+	// Define the reference Right Ascension coordinates for the image:
+	CRVAL1 := ps.RA
+
+	// Define the reference declination coordinates for the image:
+	CRVAL2 := ps.Dec
+
+	projectedSources := make([]struct{ x, y float64 }, 3)
+	for i, source := range sources {
+		// Convert the equatorial coordinates to gnomic coordinates:
+		x, y := projection.ConvertEquatorialToGnomic(source.RA, source.Dec, CRVAL1, CRVAL2)
+		// Store the projected coordinates:
+		projectedSources[i] = struct{ x, y float64 }{x, y}
+	}
+
+	// Define permutations of indices (total 6 permutations for 3 elements) to rearrange the sources:
+	// This ensures we try all possible combinations of sources to match the asterism:
+	permutations := [][]int{
+		{0, 1, 2},
+		{0, 2, 1},
+		{1, 0, 2},
+		{1, 2, 0},
+		{2, 0, 1},
+		{2, 1, 0},
+	}
+
+	for _, perm := range permutations {
+		// Rearrange the sources according to the permutation order:
+		mappedSources := []catalog.Source{
+			sources[perm[0]],
+			sources[perm[1]],
+			sources[perm[2]],
+		}
+
+		// Use projected coordinates for the rearranged sources:
+		x1, y1 := projectedSources[perm[0]].x, projectedSources[perm[0]].y
+		x2, y2 := projectedSources[perm[1]].x, projectedSources[perm[1]].y
+		x3, y3 := projectedSources[perm[2]].x, projectedSources[perm[2]].y
+
+		// Compute invariant features for the rearranged sources:
+		features, err := geometry.ComputeInvariantFeatures(
+			x1, y1,
+			x2, y2,
+			x3, y3,
+		)
+
+		if err != nil {
+			continue
+		}
+
+		// Compare the features with the asterism's features
+		if geometry.CompareInvariantFeatures(asterism.Features, features, tolerance) {
+			// If they match, create the matches:
+			matches := []Match{
+				{Star: stars[0], Source: mappedSources[0]},
+				{Star: stars[1], Source: mappedSources[1]},
+				{Star: stars[2], Source: mappedSources[2]},
+			}
+			return matches, nil
+		}
+	}
+
+	// If no match is found, return an error
+	return nil, errors.New("no match found between asterism and source asterism")
 }
 
 /*****************************************************************************************************************/
