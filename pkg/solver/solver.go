@@ -22,6 +22,7 @@ import (
 
 	"github.com/observerly/skysolve/pkg/astrometry"
 	"github.com/observerly/skysolve/pkg/catalog"
+	"github.com/observerly/skysolve/pkg/geometry"
 )
 
 /*****************************************************************************************************************/
@@ -178,6 +179,45 @@ func NewPlateSolver(
 		Dec:        dec,
 		PixelScale: params.PixelScale,
 	}, nil
+}
+
+/*****************************************************************************************************************/
+
+func (ps *PlateSolver) GenerateStarAsterisms() []astrometry.Asterism {
+	triangles := []astrometry.Asterism{}
+
+	n := len(ps.Stars)
+
+	for i := 0; i < n-2; i++ {
+		for j := i + 1; j < n-1; j++ {
+			for k := j + 1; k < n; k++ {
+				asterism := astrometry.Asterism{
+					A: ps.Stars[i],
+					B: ps.Stars[j],
+					C: ps.Stars[k],
+				}
+
+				// Compute invariant features for the asterism:
+				features, err := geometry.ComputeInvariantFeatures(
+					float64(asterism.A.X),
+					float64(asterism.A.Y),
+					float64(asterism.B.X),
+					float64(asterism.B.Y),
+					float64(asterism.C.X),
+					float64(asterism.C.Y),
+				)
+				if err != nil {
+					continue
+				}
+
+				asterism.Features = features
+
+				triangles = append(triangles, asterism)
+			}
+		}
+	}
+
+	return triangles
 }
 
 /*****************************************************************************************************************/
