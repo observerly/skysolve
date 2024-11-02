@@ -10,33 +10,47 @@ When provided with the approximate equatorial coordinates of an image and the de
 
 ### Why SkySolve?
 
-Here at observerly, we love to write type-safe, memory-safe and performant code. We regard Go lang as giving us the code writing-efficiency of Python, with the performance of C, all with the type-safe assuredness of ... Go. We aim to make it easy for feature contributions, bug fixes and optimisations whilst not compromising on code performance. When utilised with Go's coroutines, this package can blind plate solve in less than a minute.
+### Exceptional Precision & Performance
 
-### Key Features
+Enhanced Precision: Leverages prior pointing information to improve the accuracy of plate solving. When combined locally with the GAIA DR3 catalog, it can achieve sub-arcsecond precision within ~<100ms on a modern CPU.
 
-- Zero Dependencies: Simplifies integration into your projects without the overhead of managing additional libraries.
-- High Performance: Optimized for speed, enabling real-time processing and analysis.
-- Accuracy: Utilizes prior pointing information to enhance the precision of plate solving.
+#### Zero Dependencies
+
+Seamless Integration: Easily incorporate into your projects without the need to manage additional libraries, interoperating with C or C++ modules, simplifying deployment and maintenance.
+  
+#### High Performance
+
+Optimised Speed: Facilitates real-time processing and analysis for efficient workflows, for example in Space Situational Awareness (SSA) and Space Domain Awareness (SDA).
+  
+#### Star Identification Protocol (SIP)
+
+Reliable Star Matching: Utilises SIP to accurately identify and match stars within the image, enhancing overall solving reliability.
+
+#### Adheres To FITS Standards
+
+WCS Compliant: Generates World Coordinate System (WCS) solutions that adhere to the FITS standard, ensuring compatibility with existing astronomical software and tools.
 
 ### Algorithm & Methodology
 
-#### Image Star Extraction
+#### 1. Image Star Extraction
 
-The algorithm first extracts stars from the image using a star detection algorithm. The star detection algorithm identifies bright spots in the image that are likely to be stars. These spots are then used to extract the stars' positions and intensities.
+The process begins with extracting stars from the input image using a sophisticated star detection algorithm. This algorithm identifies bright spots that are potential stars, accurately determining their positions and intensities. These extracted data points form the foundation for subsequent matching and analysis.
 
-#### Catalog Matching
+#### 2. Catalog Matching
 
-The extracted stars are then matched against a reference catalog of stars. The reference catalog contains the positions and magnitudes of stars in the sky. The algorithm uses the positions of the stars in the image and the reference catalog to find the best match between the two sets of stars.
+With the stars extracted, the algorithm matches them against a comprehensive reference catalog containing star positions and magnitudes. By comparing the spatial arrangement and brightness of the detected stars with those in the catalog, the algorithm identifies the best possible match, facilitating accurate plate solving.
 
-#### Invariant Features
+#### 3. Invariant Features
 
-The algorithm used for plate solving leverages the invariant properties of triangles. Specifically, triangles retain consistent features: the ratio of side lengths, which normalizes scale differences, and the angles, which remain unchanged by rotation, scaling, and translation. This algorithm compares the invariant features of triangles formed by various stars in the image against a reference catalog to accurately solve the plate.
+To ensure robust plate solving, the algorithm utilizes the invariant properties of triangles formed by stars. Specifically, the ratio of side lengths remains constant, normalizing any scale differences, while the angles between sides stay the same regardless of rotation, scaling, or translation. By comparing these invariant features from the image with those in the reference catalog, the algorithm can accurately determine the plate’s orientation and position. This approach enhances solution precision as more stars are detected and increases the likelihood of finding a matching solution with a larger reference catalog.
 
-The accuracy of the solution improves with the number of stars detected in the image, and the probability of finding a solution increases with a larger catalog of reference sources.
+#### 4. Affine Transformations
 
-#### Affine Transformations
+To align the captured image with the reference catalog, the algorithm employs affine transformations. These transformations include rotation, which adjusts the image orientation to match the catalog; scaling, which normalizes the size differences between the image and reference data; and translation, which shifts the image position to align with the catalog coordinates. Affine transformations preserve points, straight lines, and planes, ensuring that the alignment process maintains the geometric integrity of the image.
 
-The algorithm uses affine transformations to align the image with the reference catalog. Affine transformations are a class of linear transformations that preserve points, straight lines, and planes. The algorithm uses these transformations to rotate, scale, and translate the image to match the reference catalog.
+#### 5. Simple Imaging Polynomial (SIP) Integration
+
+**Simple Imaging Polynomial (SIP)** is employed to account for optical distortions and projection effects inherent in astronomical imaging systems. SIP uses polynomial coefficients to map pixel coordinates to world coordinates, enabling precise correction of image distortions. By modeling the relationship between pixel positions and celestial coordinates, SIP corrects for lens aberrations and other distortions. Additionally, applying SIP transformations ensures that the star positions are accurately represented in a standardized projection system, facilitating reliable catalog matching.
 
 ---
 
