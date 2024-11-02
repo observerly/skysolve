@@ -10,13 +10,13 @@ When provided with the approximate equatorial coordinates of an image and the de
 
 ### Why SkySolve?
 
-### Exceptional Precision & Performance
+#### Exceptional Precision & Performance
 
 Enhanced Precision: Leverages prior pointing information to improve the accuracy of plate solving. When combined locally with the GAIA DR3 catalog, it can achieve sub-arcsecond precision within ~<100ms on a modern CPU.
 
 #### Zero Dependencies
 
-Seamless Integration: Easily incorporate into your projects without the need to manage additional libraries, interoperating with C or C++ modules, simplifying deployment and maintenance.
+Seamless Integration: Easily incorporate into your projects without the need to manage additional libraries or interoperating with C or C++ modules, simplifying deployment and maintenance.
   
 #### High Performance
 
