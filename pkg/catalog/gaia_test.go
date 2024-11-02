@@ -9,6 +9,7 @@
 package catalog
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
@@ -40,6 +41,8 @@ func TestQueryExecutedSuccessfully(t *testing.T) {
 		RA:  0,
 		Dec: 0,
 	}, 2.5, 10)
+
+	fmt.Println(err)
 
 	if err != nil {
 		t.Errorf("Failed to execute query: %v", err)

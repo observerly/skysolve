@@ -12,13 +12,13 @@ package catalog
 
 import (
 	"bytes"
-	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
-	"strconv"
+	"strings"
 	"text/template"
 	"time"
 
@@ -40,6 +40,14 @@ type GAIAServiceClient struct {
 	URI    string
 	Query  GAIAQuery
 	Client *http.Client
+}
+
+/*****************************************************************************************************************/
+
+// GAIAResponse represents the JSON structure returned by GAIA TAP service.
+type GAIAResponse struct {
+	// Assuming GAIA TAP returns a "data" field containing an array of records.
+	Data [][]interface{} `json:"data"`
 }
 
 /*****************************************************************************************************************/
@@ -88,7 +96,12 @@ func (g *GAIAServiceClient) Build() (string, error) {
 		WHERE CONTAINS(
 			POINT('ICRS', ra, dec),
 			CIRCLE('ICRS', {{.RA}}, {{.Dec}}, {{.Radius}})
-		) = 1 AND phot_g_mean_mag < {{.Limit}} AND phot_proc_mode = '0'
+		) = 1 
+		AND phot_g_mean_mag < {{.Limit}} 
+		AND phot_proc_mode = '0'
+		AND pmra IS NOT NULL
+		AND pmdec IS NOT NULL
+		AND parallax IS NOT NULL
 		ORDER BY phot_rp_mean_flux DESC;
 	`
 
@@ -144,110 +157,63 @@ func (g *GAIAServiceClient) PerformRadialSearch(eq astrometry.ICRSEquatorialCoor
 	formData := url.Values{}
 	formData.Set("REQUEST", "doQuery")
 	formData.Set("LANG", "ADQL")
-	formData.Set("FORMAT", "csv")
+	formData.Set("FORMAT", "json")
 	formData.Set("QUERY", adqlQuery)
 
-	// Send the HTTP request to the GAIA TAP service:
-	resp, err := http.PostForm(g.URI, formData)
+	// Create a new POST request with the form data:
+	req, err := http.NewRequest("POST", g.URI, strings.NewReader(formData.Encode()))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	// Set the headers to handle the form data:
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// Execute the request using the custom HTTP client:
+	resp, err := g.Client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Read the response body:
-	bodyBytes, _ := io.ReadAll(resp.Body)
+	// Read the response body into a byte slice:
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
 
 	// Check for HTTP errors and return the response body if not OK:
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GAIA TAP query failed: %s", string(bodyBytes))
+		return nil, fmt.Errorf("GAIA TAP query failed with status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	// Parse the CSV data from the response body:
-	records, err := csv.NewReader(bytes.NewReader(bodyBytes)).ReadAll()
+	// Parse the JSON response into a GAIAResponse struct:
+	var gaia GAIAResponse
+	err = json.Unmarshal(bodyBytes, &gaia)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	// Unmarshal the CSV data into our struct array:
 	var stars []Source
 
-	// Iterate over the records and extract the source star data, skipping the header row:
-	for _, record := range records[1:] {
-		ra, err := strconv.ParseFloat(fmt.Sprintf("%v", record[2]), 64)
-		if err != nil {
-			continue
-		}
-
-		dec, err := strconv.ParseFloat(fmt.Sprintf("%v", record[3]), 64)
-		if err != nil {
-			continue
-		}
-
-		pmra, err := strconv.ParseFloat(fmt.Sprintf("%v", record[4]), 64)
-		if err != nil {
-			continue
-		}
-
-		pmdec, err := strconv.ParseFloat(fmt.Sprintf("%v", record[5]), 64)
-		if err != nil {
-			continue
-		}
-
-		parallax, err := strconv.ParseFloat(fmt.Sprintf("%v", record[6]), 64)
-		if err != nil {
-			continue
-		}
-
-		flux, err := strconv.ParseFloat(fmt.Sprintf("%v", record[7]), 64)
-		if err != nil {
-			continue
-		}
-
-		mag, err := strconv.ParseFloat(fmt.Sprintf("%v", record[8]), 64)
-		if err != nil {
-			continue
-		}
-
-		// Create a new source star object:
+	for _, record := range gaia.Data {
+		// Create a new Source struct from the record:
 		star := Source{
-			UID:                       record[0],
-			Designation:               record[1],
-			RA:                        ra,
-			Dec:                       dec,
-			ProperMotionRA:            pmra,
-			ProperMotionDec:           pmdec,
-			Parallax:                  parallax,
-			PhotometricGMeanFlux:      flux,
-			PhotometricGMeanMagnitude: mag,
+			UID:                       fmt.Sprintf("%v", record[0]),
+			Designation:               fmt.Sprintf("%v", record[1]),
+			RA:                        record[2].(float64),
+			Dec:                       record[3].(float64),
+			ProperMotionRA:            record[4].(float64),
+			ProperMotionDec:           record[5].(float64),
+			Parallax:                  record[6].(float64),
+			PhotometricGMeanFlux:      record[7].(float64),
+			PhotometricGMeanMagnitude: record[8].(float64),
 		}
 
-		// Append the source star to the array:
+		// Append to the stars slice of Source structs:
 		stars = append(stars, star)
 	}
 
-	// Convert string fields to float64 for RA, Dec, and Magnitude:
-	for i, star := range stars {
-		ra, err := strconv.ParseFloat(fmt.Sprintf("%v", star.RA), 64)
-		if err != nil {
-			continue
-		}
-
-		dec, err := strconv.ParseFloat(fmt.Sprintf("%v", star.Dec), 64)
-		if err != nil {
-			continue
-		}
-
-		mag, err := strconv.ParseFloat(fmt.Sprintf("%v", star.PhotometricGMeanMagnitude), 64)
-		if err != nil {
-			continue
-		}
-
-		stars[i].RA = ra
-		stars[i].Dec = dec
-		stars[i].PhotometricGMeanMagnitude = mag
-	}
-
-	// Return the extracted source star data:
 	return stars, nil
 }
 
