@@ -15,10 +15,12 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"text/template"
+	"time"
 
 	"github.com/observerly/skysolve/pkg/astrometry"
 )
@@ -35,8 +37,9 @@ type GAIAQuery struct {
 /*****************************************************************************************************************/
 
 type GAIAServiceClient struct {
-	URI   string
-	Query GAIAQuery
+	URI    string
+	Query  GAIAQuery
+	Client *http.Client
 }
 
 /*****************************************************************************************************************/
@@ -45,9 +48,27 @@ type GAIAServiceClient struct {
 // parallaxes, and proper motions, are given for around 1.46 billion sources, with a limiting magnitude
 // of G = 21.
 func NewGAIAServiceClient() *GAIAServiceClient {
+	// Create a custom dialer with a timeout of 5 seconds:
+	dialer := &net.Dialer{
+		Timeout: 5 * time.Second,
+	}
+
+	// Create a custom transport with the dialer and a TLS handshake timeout of 1 second:
+	transport := &http.Transport{
+		DialContext:         dialer.DialContext,
+		TLSHandshakeTimeout: 1 * time.Second,
+	}
+
+	// Create a custom HTTP client with the transport and overall timeout:
+	client := &http.Client{
+		Transport: transport,
+		Timeout:   10 * time.Second,
+	}
+
 	return &GAIAServiceClient{
-		URI:   "https://gea.esac.esa.int/tap-server/tap/sync",
-		Query: GAIAQuery{},
+		URI:    "https://gea.esac.esa.int/tap-server/tap/sync",
+		Query:  GAIAQuery{},
+		Client: client,
 	}
 }
 
