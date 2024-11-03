@@ -22,9 +22,9 @@ Seamless Integration: Easily incorporate into your projects without the need to 
 
 Optimised Speed: Facilitates real-time processing and analysis for efficient workflows, for example in Space Situational Awareness (SSA) and Space Domain Awareness (SDA).
   
-#### Star Identification Protocol (SIP)
+#### Simple Imaging Polynomial (SIP)
 
-Reliable Star Matching: Utilises SIP to accurately identify and match stars within the image, enhancing overall solving reliability.
+Corrects for optical distortions and projection effects, ensuring accurate representation of star positions in a standardized projection system.
 
 #### Adheres To FITS Standards
 
