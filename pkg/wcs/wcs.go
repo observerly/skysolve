@@ -19,6 +19,14 @@ import (
 
 /*****************************************************************************************************************/
 
+type CoordinateProjectionType int
+
+const (
+	RADEC_TAN CoordinateProjectionType = iota
+	RADEC_TANSIP
+)
+
+/*****************************************************************************************************************/
 type WCS struct {
 	WCAXES int     `hdu:"WCAXES" default:"2"`        // Number of world coordinate axes
 	CRPIX1 float64 `hdu:"CRPIX1"`                    // Reference pixel X
