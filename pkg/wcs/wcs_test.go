@@ -19,13 +19,34 @@ import (
 /*****************************************************************************************************************/
 
 func TestNewWCS(t *testing.T) {
-	wcs := NewWorldCoordinateSystem(1000, 1000, transform.Affine2DParameters{
+	affine := transform.Affine2DParameters{
 		A: 1,
 		B: 0,
 		C: 0,
 		D: 1,
 		E: 0,
 		F: 0,
+	}
+
+	sip := transform.SIP2DParameters{
+		AOrder: 1,
+		BOrder: 1,
+		APower: map[string]float64{
+			"0_0": 1,
+			"1_0": 0,
+			"0_1": 0,
+		},
+		BPower: map[string]float64{
+			"0_0": 1,
+			"1_0": 0,
+			"0_1": 0,
+		},
+	}
+
+	wcs := NewWorldCoordinateSystem(1000, 1000, WCSParams{
+		AffineParams: affine,
+		Projection:   RADEC_TAN,
+		SIPParams:    sip,
 	})
 
 	if wcs.CRPIX1 != 1000 {
