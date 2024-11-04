@@ -27,6 +27,35 @@ const (
 )
 
 /*****************************************************************************************************************/
+
+type CTypeP struct {
+	CType1 string
+	CType2 string
+}
+
+/*****************************************************************************************************************/
+
+func (c CoordinateProjectionType) ToCTypes() CTypeP {
+	switch c {
+	case RADEC_TAN:
+		return CTypeP{
+			CType1: "RA---TAN",
+			CType2: "DEC--TAN",
+		}
+	case RADEC_TANSIP:
+		return CTypeP{
+			CType1: "RA---TAN-SIP",
+			CType2: "DEC--TAN-SIP",
+		}
+	default:
+		return CTypeP{
+			CType1: "RA---TAN",
+			CType2: "DEC--TAN",
+		}
+	}
+}
+
+/*****************************************************************************************************************/
 type WCS struct {
 	WCAXES int     `hdu:"WCAXES" default:"2"`        // Number of world coordinate axes
 	CRPIX1 float64 `hdu:"CRPIX1"`                    // Reference pixel X
