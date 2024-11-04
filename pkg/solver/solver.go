@@ -509,18 +509,28 @@ func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance) (*wcs
 	// Calculate the y-coordinate of the center of the image:
 	y := float64(ps.Height) / 2
 
+	// Create the affine parameters:
+	affineParams := transform.Affine2DParameters{
+		A: params[0],
+		B: params[1],
+		C: params[3],
+		D: params[4],
+		E: params[2],
+		F: params[5],
+	}
+
+	// Create the SIP parameters:
+	sipParams := transform.SIP2DParameters{}
+
 	// Now that we have the affine parameters, we can calculate the actual RA and dec coordinate
 	// for the center of the image:
 	t := wcs.NewWorldCoordinateSystem(
 		x,
 		y,
-		transform.Affine2DParameters{
-			A: params[0],
-			B: params[1],
-			C: params[3],
-			D: params[4],
-			E: params[2],
-			F: params[5],
+		wcs.WCSParams{
+			Projection:   wcs.RADEC_TAN,
+			AffineParams: affineParams,
+			SIPParams:    sipParams,
 		},
 	)
 

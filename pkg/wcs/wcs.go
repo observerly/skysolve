@@ -87,7 +87,10 @@ type WCS struct {
 
 /*****************************************************************************************************************/
 
-func NewWorldCoordinateSystem(xc float64, yc float64, params transform.Affine2DParameters) WCS {
+func NewWorldCoordinateSystem(xc float64, yc float64, params WCSParams) WCS {
+	// Get the coordinate projection types, e.g., "RA---TAN", or "RA---TAN-SIP":
+	ctypes := params.Projection.ToCTypes()
+
 	// Create a new WCS object:
 	wcs := WCS{
 		WCAXES: 2, // We always assume two world coordinate axes, RA and Dec.
@@ -95,16 +98,16 @@ func NewWorldCoordinateSystem(xc float64, yc float64, params transform.Affine2DP
 		CRPIX2: float64(yc),
 		CRVAL1: 0,
 		CRVAL2: 0,
-		CUNIT1: "deg",      // We always assume degrees.
-		CUNIT2: "deg",      // We always assume degrees.
-		CTYPE1: "RA---TAN", // We always assume a tangential projection.
-		CTYPE2: "DEC--TAN", // We always assume a tangential projection.
-		CD1_1:  params.A,
-		CD1_2:  params.B,
-		CD2_1:  params.C,
-		CD2_2:  params.D,
-		E:      params.E,
-		F:      params.F,
+		CUNIT1: "deg", // We always assume degrees.
+		CUNIT2: "deg", // We always assume degrees.
+		CTYPE1: ctypes.CType1,
+		CTYPE2: ctypes.CType2,
+		CD1_1:  params.AffineParams.A,
+		CD1_2:  params.AffineParams.B,
+		CD2_1:  params.AffineParams.C,
+		CD2_2:  params.AffineParams.D,
+		E:      params.AffineParams.E,
+		F:      params.AffineParams.F,
 	}
 
 	// Calculate the reference equatorial coordinate:
