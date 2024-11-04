@@ -56,6 +56,15 @@ func (c CoordinateProjectionType) ToCTypes() CTypeP {
 }
 
 /*****************************************************************************************************************/
+
+type WCSParams struct {
+	Projection   CoordinateProjectionType     // Projection type e.g., "TAN", or "TAN-SIP"
+	AffineParams transform.Affine2DParameters // Affine transformation parameters
+	SIPParams    transform.SIP2DParameters    // SIP transformation (distortion) coefficients
+}
+
+/*****************************************************************************************************************/
+
 type WCS struct {
 	WCAXES int     `hdu:"WCAXES" default:"2"`        // Number of world coordinate axes
 	CRPIX1 float64 `hdu:"CRPIX1"`                    // Reference pixel X
