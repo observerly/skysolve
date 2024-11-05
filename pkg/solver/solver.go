@@ -675,7 +675,7 @@ func (ps *PlateSolver) solveForSIPParameters(
 
 /*****************************************************************************************************************/
 
-func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance) (*wcs.WCS, error) {
+func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance, sipOrder int) (*wcs.WCS, error) {
 	matches, err := ps.FindSourceMatches(tolerance)
 
 	if err != nil {
@@ -686,9 +686,10 @@ func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance) (*wcs
 		return nil, errors.New("insufficient matches to perform plate solving")
 	}
 
-	n := 2 * len(matches)
-	A := make([][]float64, n)
-	B := make([]float64, n)
+	n := len(matches)
+
+	A := make([][]float64, 2*n)
+	B := make([]float64, 2*n)
 
 	// Calculate the affine transformation matrix from the matches:
 	for i, match := range matches {
@@ -705,54 +706,59 @@ func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance) (*wcs
 		B[2*i+1] = dec
 	}
 
-	// Convert A to a matrix:
-	a, err := matrix.NewFromSlice(iutils.Flatten2DFloat64Array(A), n, 6)
+	// Create the affine parameters:
+	affineParams, err := ps.solveForAffineParameters(A, B, 2*n)
+
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert B to a matrix:
-	b, err := matrix.NewFromSlice(B, n, 1)
-	if err != nil {
-		return nil, err
-	}
-
-	// Compute A^T
-	aT, err := a.Transpose()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to compute A^T: %v", err)
-	}
-
-	// Compute A^T * A
-	aTa, err := aT.Multiply(a)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compute A^T * A: %v", err)
-	}
-
-	// Compute A^T * B
-	aTb, err := aT.Multiply(b)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compute A^T * B: %v", err)
-	}
-
-	// Compute the inverse of A^T * A
-	aTaInv, err := aTa.Invert()
-	if err != nil {
-		return nil, fmt.Errorf("failed to invert A^T * A: %v", err)
-	}
-
-	// Compute the affine transformation matrix parameters using the least squares method:
-	params := make([]float64, 6)
-	if aTaInv == nil || aTb == nil {
+	// Check if the affine parameters are nil:
+	if affineParams == nil {
 		return nil, errors.New("failed to compute affine transformation matrix parameters")
 	}
 
-	// Calculate the affine transformation matrix parameters:
-	for i := 0; i < 6; i++ {
-		for j := 0; j < 6; j++ {
-			params[i] += aTaInv.Value[i*6+j] * aTb.Value[j]
-		}
+	// Compute residuals after Affine Transformation for SIP fitting:
+	residualsRA := make([]float64, n)
+	residualsDec := make([]float64, n)
+	A_SIP_RA := make([][]float64, n)
+	A_SIP_Dec := make([][]float64, n)
+	B_SIP_RA := make([]float64, n)
+	B_SIP_Dec := make([]float64, n)
+
+	for i, match := range matches {
+		x := float64(match.Star.X)
+		y := float64(match.Star.Y)
+
+		// Predicted RA and Dec using affine parameters
+		predRA := affineParams.A*x + affineParams.B*y + affineParams.E
+		predDec := affineParams.C*x + affineParams.D*y + affineParams.F
+
+		residualsRA[i] = match.Source.RA - predRA
+		residualsDec[i] = match.Source.Dec - predDec
+
+		// Generate polynomial terms for SIP fitting:
+		terms := utils.ComputePolynomialTerms(x, y, sipOrder)
+
+		// Assign polynomial terms to design matrices:
+		A_SIP_RA[i] = terms
+		A_SIP_Dec[i] = terms
+
+		// Assign residuals as targets for SIP fitting:
+		B_SIP_RA[i] = residualsRA[i]
+		B_SIP_Dec[i] = residualsDec[i]
+	}
+
+	// Create the SIP parameters by solving the SIP polynomials from the residuals:
+	sipParams, err := ps.solveForSIPParameters(A_SIP_RA, A_SIP_Dec, B_SIP_RA, B_SIP_Dec, n, sipOrder)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if the SIP parameters are nil:
+	if sipParams == nil {
+		return nil, errors.New("failed to compute SIP transformation matrix parameters")
 	}
 
 	// Calculate the x-coordinate of the center of the image:
@@ -761,28 +767,15 @@ func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance) (*wcs
 	// Calculate the y-coordinate of the center of the image:
 	y := float64(ps.Height) / 2
 
-	// Create the affine parameters:
-	affineParams := transform.Affine2DParameters{
-		A: params[0],
-		B: params[1],
-		C: params[3],
-		D: params[4],
-		E: params[2],
-		F: params[5],
-	}
-
-	// Create the SIP parameters:
-	sipParams := transform.SIP2DParameters{}
-
 	// Now that we have the affine parameters, we can calculate the actual RA and dec coordinate
 	// for the center of the image:
 	t := wcs.NewWorldCoordinateSystem(
 		x,
 		y,
 		wcs.WCSParams{
-			Projection:   wcs.RADEC_TAN,
-			AffineParams: affineParams,
-			SIPParams:    sipParams,
+			Projection:   wcs.RADEC_TANSIP,
+			AffineParams: *affineParams,
+			SIPParams:    *sipParams,
 		},
 	)
 

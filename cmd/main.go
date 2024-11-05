@@ -80,7 +80,7 @@ func main() {
 
 	// Record the start time
 	startTime := time.Now()
-	wcs, err := solver.Solve(tolerances)
+	wcs, err := solver.Solve(tolerances, 3)
 
 	if err != nil {
 		fmt.Printf("an error occured while plate solving: %v", err)
