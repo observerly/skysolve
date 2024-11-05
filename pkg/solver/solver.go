@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"runtime"
 	"sort"
 	"sync"
 
@@ -243,7 +244,7 @@ func (ps *PlateSolver) GenerateSourceAsterisms() []catalog.SourceAsterism {
 					C: ps.Sources[k],
 				}
 
-				// Compute invariant features and store them
+				// Compute invariant features and store them in the source asterism:
 				features, err := geometry.ComputeInvariantFeatures(
 					sourceAsterism.A.RA,
 					sourceAsterism.A.Dec,
@@ -392,6 +393,13 @@ func (ps *PlateSolver) FindSourceMatches(tolerance geometry.InvariantFeatureTole
 
 	matches := make([]Match, 0)
 
+	// Limit the number of concurrent goroutines to the number of CPUs times 20:
+	// This seems to be an optimal number of goroutines to run concurrently:
+	limit := runtime.NumCPU() * 20
+
+	// Semaphore to safely limit concurrent goroutines:
+	semaphore := make(chan struct{}, limit)
+
 	for i, asterism := range asterisms {
 		// Quantize the asterism's features to create a key:
 		key := utils.QuantizeFeatures(asterism.Features, precision)
@@ -399,15 +407,27 @@ func (ps *PlateSolver) FindSourceMatches(tolerance geometry.InvariantFeatureTole
 		// Get the source triangles with the same invariant features, e.g. by looking for matching source
 		// triangles in the index:
 		if sources, found := sourceTriangleIndex[key]; found {
-			for _, source := range sources {
-				// Attempt to match the individual stars to sources in the catalog, using the star triangle and source triangle:
-				match, err := ps.MatchAsterismsWithCatalog(asterism, source, tolerance)
+			var wg sync.WaitGroup
+			wg.Add(len(sources))
 
-				if err == nil && match != nil {
-					// Add the matches to the list of matches:
-					matches = append(matches, match...)
-				}
+			for _, source := range sources {
+				semaphore <- struct{}{}
+
+				// Attempt to match the individual stars to sources in the catalog, using the star triangle and source triangle:
+				go func(asterism astrometry.Asterism, source catalog.SourceAsterism) {
+					defer wg.Done()
+					defer func() { <-semaphore }()
+
+					match, err := ps.MatchAsterismsWithCatalog(asterism, source, tolerance)
+
+					if err == nil && match != nil {
+						matches = append(matches, match...)
+					}
+				}(asterism, source)
 			}
+
+			// Wait for all goroutines to finish:
+			wg.Wait()
 		}
 
 		// If we have more than 32 matches, we can stop looking for more, this seems to be an optimal
