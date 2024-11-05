@@ -534,6 +534,127 @@ func (ps *PlateSolver) solveForAffineParameters(
 
 /*****************************************************************************************************************/
 
+// solveForSIPParameters fits higher-order SIP polynomials to the residuals after the affine transformation.
+//
+//lint:ignore U1000 Reserved for future implementation.
+func (ps *PlateSolver) solveForSIPParameters(
+	aRA [][]float64,
+	aDec [][]float64,
+	bRA []float64,
+	bDec []float64,
+	n int,
+	sipOrder int,
+) (*transform.SIP2DParameters, error) {
+	// Calculate the number of terms in the SIP polynomial:
+	numTerms := (sipOrder + 1) * (sipOrder + 2) / 2
+
+	// Convert SIP design matrices and B vectors to matrices
+	aSIP_RA, err := matrix.NewFromSlice(iutils.Flatten2DFloat64Array(aRA), n, numTerms)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SIP RA matrix: %v", err)
+	}
+
+	bSIP_RA, err := matrix.NewFromSlice(bRA, n, 1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SIP RA vector: %v", err)
+	}
+
+	aSIP_Dec, err := matrix.NewFromSlice(iutils.Flatten2DFloat64Array(aDec), n, numTerms)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SIP Dec matrix: %v", err)
+	}
+
+	bSIP_Dec, err := matrix.NewFromSlice(bDec, n, 1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SIP Dec vector: %v", err)
+	}
+
+	aSIPT_RA, err := aSIP_RA.Transpose()
+	if err != nil {
+		return nil, fmt.Errorf("failed to transpose SIP RA matrix: %v", err)
+	}
+
+	aTaSIP_RA, err := aSIPT_RA.Multiply(aSIP_RA)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute A^T * A for SIP RA: %v", err)
+	}
+
+	aTbSIP_RA, err := aSIPT_RA.Multiply(bSIP_RA)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute A^T * B for SIP RA: %v", err)
+	}
+
+	aTaInvSIP_RA, err := aTaSIP_RA.Invert()
+	if err != nil {
+		return nil, fmt.Errorf("failed to invert A^T * A for SIP RA: %v", err)
+	}
+
+	sipParamsRA := make([]float64, numTerms)
+	for i := 0; i < numTerms; i++ {
+		for j := 0; j < numTerms; j++ {
+			sipParamsRA[i] += aTaInvSIP_RA.Value[i*numTerms+j] * aTbSIP_RA.Value[j]
+		}
+	}
+
+	// Solve for SIP Dec Parameters
+	aSIPT_Dec, err := aSIP_Dec.Transpose()
+	if err != nil {
+		return nil, fmt.Errorf("failed to transpose SIP Dec matrix: %v", err)
+	}
+
+	aTaSIP_Dec, err := aSIPT_Dec.Multiply(aSIP_Dec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute A^T * A for SIP Dec: %v", err)
+	}
+
+	aTbSIP_Dec, err := aSIPT_Dec.Multiply(bSIP_Dec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute A^T * B for SIP Dec: %v", err)
+	}
+
+	aTaInvSIP_Dec, err := aTaSIP_Dec.Invert()
+	if err != nil {
+		return nil, fmt.Errorf("failed to invert A^T * A for SIP Dec: %v", err)
+	}
+
+	sipParamsDec := make([]float64, numTerms)
+	for i := 0; i < numTerms; i++ {
+		for j := 0; j < numTerms; j++ {
+			sipParamsDec[i] += aTaInvSIP_Dec.Value[i*numTerms+j] * aTbSIP_Dec.Value[j]
+		}
+	}
+
+	// Map SIP coefficients to FITS term keys for RA and Dec:
+	sipTermKeysA := utils.GeneratePolynomialTermKeys("A", sipOrder)
+	sipTermKeysB := utils.GeneratePolynomialTermKeys("B", sipOrder)
+
+	if len(sipTermKeysA) != numTerms || len(sipTermKeysB) != numTerms {
+		return nil, fmt.Errorf("incorrect number of SIP term keys: got %d for A and %d for B, expected %d each", len(sipTermKeysA), len(sipTermKeysB), numTerms)
+	}
+
+	aPowerMap := make(map[string]float64)
+	bPowerMap := make(map[string]float64)
+
+	for idx, term := range sipTermKeysA {
+		aPowerMap[term] = sipParamsRA[idx]
+	}
+
+	for idx, term := range sipTermKeysB {
+		bPowerMap[term] = sipParamsDec[idx]
+	}
+
+	sipParams := transform.SIP2DParameters{
+		AOrder: sipOrder,
+		BOrder: sipOrder,
+		APower: aPowerMap,
+		BPower: bPowerMap,
+	}
+
+	return &sipParams, nil
+}
+
+/*****************************************************************************************************************/
+
 func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance) (*wcs.WCS, error) {
 	matches, err := ps.FindSourceMatches(tolerance)
 
