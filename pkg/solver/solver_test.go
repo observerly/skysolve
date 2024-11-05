@@ -77,7 +77,7 @@ func TestSolverOnMatches(t *testing.T) {
 
 	// Record the start time
 	startTime := time.Now()
-	wcs, err := solver.Solve(tolerances)
+	wcs, err := solver.Solve(tolerances, 3)
 
 	if err != nil {
 		t.Errorf("error: %v", err)
@@ -107,6 +107,10 @@ func TestSolverOnMatches(t *testing.T) {
 	t.Logf("solver.Solve(tolerances) completed in %v", elapsedTime)
 
 	t.Logf("RA: %v, Dec: %v", eq.RA, eq.Dec)
+
+	t.Logf(wcs.CTYPE1)
+
+	t.Logf(wcs.CTYPE2)
 }
 
 /*****************************************************************************************************************/
