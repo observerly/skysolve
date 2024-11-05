@@ -423,6 +423,117 @@ func (ps *PlateSolver) FindSourceMatches(tolerance geometry.InvariantFeatureTole
 
 /*****************************************************************************************************************/
 
+// solveForAffineParameters fits an affine transformation matrix to the matches.
+//
+//lint:ignore U1000 Reserved for future implementation.
+func (ps *PlateSolver) solveForAffineParameters(
+	a [][]float64,
+	b []float64,
+	n int,
+) (*transform.Affine2DParameters, error) {
+	var (
+		B      *matrix.Matrix
+		aT     *matrix.Matrix
+		aTaInv *matrix.Matrix
+		err    error
+	)
+
+	// WaitGroup for creating A and B concurrently:
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	errorChannel := make(chan error, 2)
+
+	go func() {
+		defer wg.Done()
+
+		// Convert A to a matrix:
+		A, err := matrix.NewFromSlice(iutils.Flatten2DFloat64Array(a), n, 6)
+
+		if err != nil {
+			errorChannel <- fmt.Errorf("failed to create A matrix: %v", err)
+			return
+		}
+
+		// Compute A^T (transpose of A):
+		aT, err = A.Transpose()
+
+		if err != nil {
+			errorChannel <- fmt.Errorf("failed to compute A^T: %v", err)
+			return
+		}
+
+		// Compute A^T * A (matrix multiplication):
+		aTa, err := aT.Multiply(A)
+		if err != nil {
+			errorChannel <- fmt.Errorf("failed to compute A^T * A: %v", err)
+			return
+		}
+
+		// Compute the inverse of A^T * A (matrix inversion):
+		aTaInv, err = aTa.Invert()
+		if err != nil {
+			errorChannel <- fmt.Errorf("failed to invert A^T * A: %v", err)
+			return
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		// Convert B to a matrix:
+		B, err = matrix.NewFromSlice(b, n, 1)
+
+		if err != nil {
+			errorChannel <- fmt.Errorf("failed to create B matrix: %v", err)
+			return
+		}
+	}()
+
+	// Wait for both goroutines to finish and close the error channel:
+	wg.Wait()
+	// Close the error channel to signal that no more errors will be sent:
+	close(errorChannel)
+
+	// If an error occured, return the error:
+	if err := <-errorChannel; err != nil {
+		return nil, err
+	}
+
+	// Compute A^T * B (matrix multiplication):
+	aTb, err := aT.Multiply(B)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute A^T * B: %v", err)
+	}
+
+	if aTaInv == nil || aTb == nil {
+		return nil, errors.New("failed to compute affine transformation matrix parameters")
+	}
+
+	// Compute the affine transformation matrix parameters using the least squares method:
+	params := make([]float64, 6)
+
+	// Calculate the affine transformation matrix parameters:
+	for i := 0; i < 6; i++ {
+		for j := 0; j < 6; j++ {
+			params[i] += aTaInv.Value[i*6+j] * aTb.Value[j]
+		}
+	}
+
+	affineParams := transform.Affine2DParameters{
+		A: params[0],
+		B: params[1],
+		C: params[3],
+		D: params[4],
+		E: params[2],
+		F: params[5],
+	}
+
+	return &affineParams, nil
+}
+
+/*****************************************************************************************************************/
+
 func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance) (*wcs.WCS, error) {
 	matches, err := ps.FindSourceMatches(tolerance)
 
