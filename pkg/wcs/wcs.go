@@ -11,7 +11,9 @@ package wcs
 /*****************************************************************************************************************/
 
 import (
+	"fmt"
 	"math"
+	"strings"
 
 	"github.com/observerly/skysolve/pkg/astrometry"
 	"github.com/observerly/skysolve/pkg/transform"
@@ -132,6 +134,8 @@ func NewWorldCoordinateSystem(xc float64, yc float64, params WCSParams) WCS {
 
 func (wcs *WCS) SolveForCentroid() (coordinate astrometry.ICRSEquatorialCoordinate) {
 	return wcs.PixelToEquatorialCoordinate(wcs.CRPIX1, wcs.CRPIX2)
+}
+
 /*****************************************************************************************************************/
 
 // Helper function to parse SIP term keys
@@ -158,6 +162,32 @@ func (wcs *WCS) PixelToEquatorialCoordinate(
 	// Compute the offsets from the reference pixel
 	deltaX := x - wcs.CRPIX1 // Offset in X
 	deltaY := y - wcs.CRPIX2 // Offset in Y
+
+	// Compute non-linear SIP distortion corrections A and B:
+	A := 0.0
+	B := 0.0
+
+	// Apply A polynomial corrections:
+	for term, coeff := range wcs.SIP.APower {
+		i, j, err := parseSIPTerm(term, "A")
+		if err != nil {
+			continue
+		}
+		A += coeff * math.Pow(deltaX, float64(i)) * math.Pow(deltaY, float64(j))
+	}
+
+	// Apply B polynomial corrections:
+	for term, coeff := range wcs.SIP.BPower {
+		i, j, err := parseSIPTerm(term, "B")
+		if err != nil {
+			continue
+		}
+		B += coeff * math.Pow(deltaX, float64(i)) * math.Pow(deltaY, float64(j))
+	}
+
+	// Apply forward SIP transformation to correct for non-linear distortions:
+	deltaX += A
+	deltaY += B
 
 	// Calculate the reference equatorial coordinate for the right ascension:
 	ra := wcs.CD1_1*deltaX + wcs.CD1_2*deltaY + wcs.E
