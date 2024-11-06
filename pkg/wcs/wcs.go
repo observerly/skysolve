@@ -130,6 +130,22 @@ func NewWorldCoordinateSystem(xc float64, yc float64, params WCSParams) WCS {
 
 func (wcs *WCS) SolveForCentroid() (coordinate astrometry.ICRSEquatorialCoordinate) {
 	return wcs.PixelToEquatorialCoordinate(wcs.CRPIX1, wcs.CRPIX2)
+/*****************************************************************************************************************/
+
+// Helper function to parse SIP term keys
+func parseSIPTerm(term, prefix string) (i int, j int, err error) {
+	parts := strings.Split(term, "_")
+
+	if len(parts) != 3 || parts[0] != prefix {
+		return 0, 0, fmt.Errorf("invalid SIP term format: %s", term)
+	}
+
+	_, err = fmt.Sscanf(parts[1]+" "+parts[2], "%d %d", &i, &j)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse SIP term: %s", term)
+	}
+
+	return i, j, nil
 }
 
 /*****************************************************************************************************************/
