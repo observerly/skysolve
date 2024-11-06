@@ -444,8 +444,6 @@ func (ps *PlateSolver) FindSourceMatches(tolerance geometry.InvariantFeatureTole
 /*****************************************************************************************************************/
 
 // solveForAffineParameters fits an affine transformation matrix to the matches.
-//
-//lint:ignore U1000 Reserved for future implementation.
 func (ps *PlateSolver) solveForAffineParameters(
 	a [][]float64,
 	b []float64,
@@ -555,8 +553,6 @@ func (ps *PlateSolver) solveForAffineParameters(
 /*****************************************************************************************************************/
 
 // solveForSIPParameters fits higher-order SIP polynomials to the residuals after the affine transformation.
-//
-//lint:ignore U1000 Reserved for future implementation.
 func (ps *PlateSolver) solveForSIPParameters(
 	aRA [][]float64,
 	aDec [][]float64,
