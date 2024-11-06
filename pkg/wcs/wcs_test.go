@@ -32,14 +32,14 @@ func TestNewWCS(t *testing.T) {
 		AOrder: 1,
 		BOrder: 1,
 		APower: map[string]float64{
-			"0_0": 1,
-			"1_0": 0,
-			"0_1": 0,
+			"A_0_0": 0,
+			"A_1_0": 0,
+			"A_0_1": 0,
 		},
 		BPower: map[string]float64{
-			"0_0": 1,
-			"1_0": 0,
-			"0_1": 0,
+			"B_0_0": 0,
+			"B_1_0": 0,
+			"B_0_1": 0,
 		},
 	}
 
