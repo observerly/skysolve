@@ -552,7 +552,11 @@ func (ps *PlateSolver) solveForAffineParameters(
 
 /*****************************************************************************************************************/
 
-// solveForSIPParameters fits higher-order SIP polynomials to the residuals after the affine transformation.
+// solveForSIPParameters fits higher-order SIP polynomials to the non-linear residuals after the affine transformation.
+//
+// SIP’s Purpose for Non-linear Distortions: SIP is specifically designed to correct non-linear distortions.
+// Terms where  p + q <= 1  represent linear transformations, which are unnecessary in SIP since they’re covered
+// by the affine transformations.
 func (ps *PlateSolver) solveForSIPParameters(
 	aRA [][]float64,
 	aDec [][]float64,
@@ -651,11 +655,23 @@ func (ps *PlateSolver) solveForSIPParameters(
 	aPowerMap := make(map[string]float64)
 	bPowerMap := make(map[string]float64)
 
+	// Zero out terms in sipParamsRA where p + q <= 1:
 	for idx, term := range sipTermKeysA {
+		var p, q int
+		fmt.Sscanf(term, "A_%d_%d", &p, &q)
+		if p+q <= 1 {
+			sipParamsRA[idx] = 0
+		}
 		aPowerMap[term] = sipParamsRA[idx]
 	}
 
+	// Zero out terms in sipParamsDec where p + q <= 1
 	for idx, term := range sipTermKeysB {
+		var p, q int
+		fmt.Sscanf(term, "B_%d_%d", &p, &q)
+		if p+q <= 1 {
+			sipParamsDec[idx] = 0
+		}
 		bPowerMap[term] = sipParamsDec[idx]
 	}
 
