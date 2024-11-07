@@ -23,3 +23,12 @@ type SIP2DParameters struct {
 }
 
 /*****************************************************************************************************************/
+
+type SIP2DInverseParameters struct {
+	APOrder int
+	APPower map[string]float64
+	BPOrder int
+	BPPower map[string]float64
+}
+
+/*****************************************************************************************************************/
