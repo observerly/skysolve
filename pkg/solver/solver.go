@@ -292,17 +292,9 @@ func (ps *PlateSolver) MatchAsterismsWithCatalog(
 	// Define the reference declination coordinates for the image:
 	CRVAL2 := ps.Dec
 
-	projectedSources := make([]struct{ x, y float64 }, 3)
-	for i, source := range sources {
-		// Convert the equatorial coordinates to gnomic coordinates:
-		x, y := projection.ConvertEquatorialToGnomic(source.RA, source.Dec, CRVAL1, CRVAL2)
-		// Store the projected coordinates:
-		projectedSources[i] = struct{ x, y float64 }{x, y}
-	}
-
 	// Define permutations of indices (total 6 permutations for 3 elements) to rearrange the sources:
 	// This ensures we try all possible combinations of sources to match the asterism:
-	permutations := [][]int{
+	permutations := [6][3]int{
 		{0, 1, 2},
 		{0, 2, 1},
 		{1, 0, 2},
@@ -312,38 +304,28 @@ func (ps *PlateSolver) MatchAsterismsWithCatalog(
 	}
 
 	for _, perm := range permutations {
-		// Rearrange the sources according to the permutation order:
-		mappedSources := []catalog.Source{
-			sources[perm[0]],
-			sources[perm[1]],
-			sources[perm[2]],
-		}
+		i0, i1, i2 := perm[0], perm[1], perm[2]
 
-		// Use projected coordinates for the rearranged sources:
-		x1, y1 := projectedSources[perm[0]].x, projectedSources[perm[0]].y
-		x2, y2 := projectedSources[perm[1]].x, projectedSources[perm[1]].y
-		x3, y3 := projectedSources[perm[2]].x, projectedSources[perm[2]].y
+		// Convert the equatorial coordinates to gnomic coordinates for each source in the permutation:
+		x1, y1 := projection.ConvertEquatorialToGnomic(sources[i0].RA, sources[i0].Dec, CRVAL1, CRVAL2)
+		x2, y2 := projection.ConvertEquatorialToGnomic(sources[i1].RA, sources[i1].Dec, CRVAL1, CRVAL2)
+		x3, y3 := projection.ConvertEquatorialToGnomic(sources[i2].RA, sources[i2].Dec, CRVAL1, CRVAL2)
 
 		// Compute invariant features for the rearranged sources:
-		features, err := geometry.ComputeInvariantFeatures(
-			x1, y1,
-			x2, y2,
-			x3, y3,
-		)
+		features, err := geometry.ComputeInvariantFeatures(x1, y1, x2, y2, x3, y3)
 
 		if err != nil {
 			continue
 		}
 
-		// Compare the features with the asterism's features
+		// Compare the features with the asterism's features:
 		if geometry.CompareInvariantFeatures(asterism.Features, features, tolerance) {
-			// If they match, create the matches:
-			matches := []Match{
-				{Star: stars[0], Source: mappedSources[0]},
-				{Star: stars[1], Source: mappedSources[1]},
-				{Star: stars[2], Source: mappedSources[2]},
-			}
-			return matches, nil
+			// If features match within the specified tolerance, create and return the matches
+			return []Match{
+				{Star: stars[0], Source: sources[i0]},
+				{Star: stars[1], Source: sources[i1]},
+				{Star: stars[2], Source: sources[i2]},
+			}, nil
 		}
 	}
 
