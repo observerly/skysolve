@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"runtime"
 	"sort"
 	"sync"
 
@@ -282,10 +281,10 @@ func (ps *PlateSolver) MatchAsterismsWithCatalog(
 	tolerance geometry.InvariantFeatureTolerance,
 ) ([]Match, error) {
 	// Define the stars for the asterism:
-	stars := []photometry.Star{asterism.A, asterism.B, asterism.C}
+	stars := [3]photometry.Star{asterism.A, asterism.B, asterism.C}
 
 	// Define the sources for the source asterism:
-	sources := []catalog.Source{sourceAsterism.A, sourceAsterism.B, sourceAsterism.C}
+	sources := [3]catalog.Source{sourceAsterism.A, sourceAsterism.B, sourceAsterism.C}
 
 	// Define the reference Right Ascension coordinates for the image:
 	CRVAL1 := ps.RA
@@ -383,7 +382,7 @@ func (ps *PlateSolver) FindSourceMatches(tolerance geometry.InvariantFeatureTole
 	precision := 4
 
 	// Create a map to index source triangles by their quantized invariant features:
-	sourceTriangleIndex := make(map[string][]catalog.SourceAsterism)
+	sourceTriangleIndex := make(map[string][]catalog.SourceAsterism, len(sourceAsterisms))
 
 	// Compute invariant features for source triangles and index them:
 	for _, source := range sourceAsterisms {
@@ -391,52 +390,36 @@ func (ps *PlateSolver) FindSourceMatches(tolerance geometry.InvariantFeatureTole
 		sourceTriangleIndex[key] = append(sourceTriangleIndex[key], source)
 	}
 
+	// Define the tolerance for matching the invariant features:
 	matches := make([]Match, 0)
 
-	// Limit the number of concurrent goroutines to the number of CPUs times 20:
-	// This seems to be an optimal number of goroutines to run concurrently:
-	limit := runtime.NumCPU() * 20
+	// Setup a wait group for the goroutines:
+	wg.Add(len(asterisms))
 
-	// Semaphore to safely limit concurrent goroutines:
-	semaphore := make(chan struct{}, limit)
+	// Iterate over the asterisms and attempt to match them with the catalog:
+	for _, asterism := range asterisms {
+		go func() {
+			defer wg.Done()
+			// Quantize the asterism's features to create a key:
+			key := utils.QuantizeFeatures(asterism.Features, precision)
 
-	for i, asterism := range asterisms {
-		// Quantize the asterism's features to create a key:
-		key := utils.QuantizeFeatures(asterism.Features, precision)
-
-		// Get the source triangles with the same invariant features, e.g. by looking for matching source
-		// triangles in the index:
-		if sources, found := sourceTriangleIndex[key]; found {
-			var wg sync.WaitGroup
-			wg.Add(len(sources))
-
-			for _, source := range sources {
-				semaphore <- struct{}{}
-
+			// Get the source triangles with the same invariant features, e.g. by looking for matching source
+			// triangles in the index:
+			if sources, found := sourceTriangleIndex[key]; found {
 				// Attempt to match the individual stars to sources in the catalog, using the star triangle and source triangle:
-				go func(asterism astrometry.Asterism, source catalog.SourceAsterism) {
-					defer wg.Done()
-					defer func() { <-semaphore }()
+				source := sources[0]
 
-					match, err := ps.MatchAsterismsWithCatalog(asterism, source, tolerance)
+				match, err := ps.MatchAsterismsWithCatalog(asterism, source, tolerance)
 
-					if err == nil && match != nil {
-						matches = append(matches, match...)
-					}
-				}(asterism, source)
+				if err == nil && match != nil {
+					matches = append(matches, match...)
+				}
 			}
-
-			// Wait for all goroutines to finish:
-			wg.Wait()
-		}
-
-		// If we have more than 32 matches, we can stop looking for more, this seems to be an optimal
-		// amount of matches to plate solve to a high degree of accuracy, this covers more than 30% of
-		// the total source count.
-		if len(matches) >= 32 && i < 40 {
-			break
-		}
+		}()
 	}
+
+	// Wait for all goroutines to finish:
+	wg.Wait()
 
 	return matches, nil
 }
