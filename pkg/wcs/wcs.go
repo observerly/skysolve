@@ -114,12 +114,9 @@ func NewWorldCoordinateSystem(xc float64, yc float64, params WCSParams) WCS {
 		SIP:    params.SIPParams,
 	}
 
-	// Calculate the reference equatorial coordinate:
-	eq := wcs.SolveForCentroid()
-
 	// Set the reference equatorial coordinate:
-	wcs.CRVAL1 = eq.RA
-	wcs.CRVAL2 = eq.Dec
+	wcs.CRVAL1 = params.AffineParams.E
+	wcs.CRVAL2 = params.AffineParams.F
 
 	// Calculate the coordinate increment for axis 1:
 	wcs.CDELT1 = math.Sqrt(wcs.CD1_1*wcs.CD1_1 + wcs.CD2_1*wcs.CD2_1)
@@ -190,7 +187,7 @@ func (wcs *WCS) PixelToEquatorialCoordinate(
 	deltaY += B
 
 	// Calculate the reference equatorial coordinate for the right ascension:
-	ra := wcs.CD1_1*deltaX + wcs.CD1_2*deltaY + wcs.E
+	ra := wcs.CD1_1*deltaX + wcs.CD1_2*deltaY + wcs.CRVAL1
 
 	// Correct for large values of RA:
 	ra = math.Mod(ra, 360)
@@ -201,7 +198,7 @@ func (wcs *WCS) PixelToEquatorialCoordinate(
 	}
 
 	// Calculate the reference equatorial coordinate for the declination:
-	dec := wcs.CD2_1*deltaX + wcs.CD2_2*deltaY + wcs.F
+	dec := wcs.CD2_1*deltaX + wcs.CD2_2*deltaY + wcs.CRVAL2
 
 	// Correct for large values of declination:
 	dec = math.Mod(dec, 90)
