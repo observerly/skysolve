@@ -28,10 +28,11 @@ import (
 /*****************************************************************************************************************/
 
 type GAIAQuery struct {
-	RA     float64 // right ascension (in degrees)
-	Dec    float64 // right ascension (in degrees)
-	Radius float64 // search radius (in degrees)
-	Limit  float64 // limiting magnitude
+	RA        float64 // right ascension (in degrees)
+	Dec       float64 // right ascension (in degrees)
+	Radius    float64 // search radius (in degrees)
+	Limit     float64 // maximum number of records to return
+	Threshold float64 // limiting magnitude
 }
 
 /*****************************************************************************************************************/
@@ -82,7 +83,7 @@ func NewGAIAServiceClient() *GAIAServiceClient {
 
 /*****************************************************************************************************************/
 
-const record = `source_id, designation, ra, dec, pmra, pmdec, parallax, phot_g_mean_flux, phot_g_mean_mag`
+const record = `source_id, designation, ra, dec, pmra, pmdec, parallax, phot_rp_mean_flux, phot_g_mean_mag`
 
 /*****************************************************************************************************************/
 
@@ -91,18 +92,15 @@ func (g *GAIAServiceClient) Build() (string, error) {
 	// @see https://gea.esac.esa.int/archive/documentation/GDR2/Gaia_archive/chap_datamodel/
 	// N.B. (use only gold standard data, e.g., photometry processing mode (byte) i.e., phot_proc_mode = '0'):
 	const queryTemplate = `
-		SELECT TOP 100 {{.Record}}
+		SELECT TOP {{.Limit}} {{.Record}}
 		FROM gaiadr2.gaia_source
 		WHERE CONTAINS(
 			POINT('ICRS', ra, dec),
 			CIRCLE('ICRS', {{.RA}}, {{.Dec}}, {{.Radius}})
 		) = 1 
-		AND phot_g_mean_mag < {{.Limit}} 
-		AND phot_proc_mode = '0'
-		AND pmra IS NOT NULL
-		AND pmdec IS NOT NULL
-		AND parallax IS NOT NULL
-		ORDER BY phot_rp_mean_flux DESC;
+		AND phot_g_mean_mag < {{.Threshold}}
+		AND phot_rp_mean_flux IS NOT NULL
+		ORDER BY phot_g_mean_mag DESC;
 	`
 
 	// Parse the ADQL query template:
@@ -114,17 +112,19 @@ func (g *GAIAServiceClient) Build() (string, error) {
 	// Set the template data from the query parameters:
 	// Data to populate the template
 	data := struct {
-		Record string
-		RA     float64
-		Dec    float64
-		Radius float64
-		Limit  float64
+		Record    string
+		RA        float64
+		Dec       float64
+		Radius    float64
+		Limit     float64
+		Threshold float64
 	}{
-		Record: record,
-		RA:     g.Query.RA,
-		Dec:    g.Query.Dec,
-		Radius: g.Query.Radius,
-		Limit:  g.Query.Limit,
+		Record:    record,
+		RA:        g.Query.RA,
+		Dec:       g.Query.Dec,
+		Radius:    g.Query.Radius,
+		Limit:     g.Query.Limit,
+		Threshold: g.Query.Threshold,
 	}
 
 	// Execute the template with the data:
@@ -140,12 +140,13 @@ func (g *GAIAServiceClient) Build() (string, error) {
 
 /*****************************************************************************************************************/
 
-func (g *GAIAServiceClient) PerformRadialSearch(eq astrometry.ICRSEquatorialCoordinate, radius float64, limit float64) ([]Source, error) {
+func (g *GAIAServiceClient) PerformRadialSearch(eq astrometry.ICRSEquatorialCoordinate, radius float64, limit float64, threshold float64) ([]Source, error) {
 	// Set the query parameters:
 	g.Query.RA = eq.RA
 	g.Query.Dec = eq.Dec
 	g.Query.Radius = radius
 	g.Query.Limit = limit
+	g.Query.Threshold = threshold
 
 	// Construct the ADQL query from the template:
 	adqlQuery, err := g.Build()
@@ -199,15 +200,30 @@ func (g *GAIAServiceClient) PerformRadialSearch(eq astrometry.ICRSEquatorialCoor
 	for _, record := range gaia.Data {
 		// Create a new Source struct from the record:
 		star := Source{
-			UID:                       fmt.Sprintf("%v", record[0]),
-			Designation:               fmt.Sprintf("%v", record[1]),
-			RA:                        record[2].(float64),
-			Dec:                       record[3].(float64),
-			ProperMotionRA:            record[4].(float64),
-			ProperMotionDec:           record[5].(float64),
-			Parallax:                  record[6].(float64),
-			PhotometricGMeanFlux:      record[7].(float64),
-			PhotometricGMeanMagnitude: record[8].(float64),
+			UID:         fmt.Sprintf("%v", record[0]),
+			Designation: fmt.Sprintf("%v", record[1]),
+			RA:          record[2].(float64),
+			Dec:         record[3].(float64),
+		}
+
+		if record[4] != nil {
+			star.ProperMotionRA = record[4].(float64)
+		}
+
+		if record[5] != nil {
+			star.ProperMotionDec = record[5].(float64)
+		}
+
+		if record[6] != nil {
+			star.Parallax = record[6].(float64)
+		}
+
+		if record[7] != nil {
+			star.PhotometricGMeanFlux = record[7].(float64)
+		}
+
+		if record[8] != nil {
+			star.PhotometricGMeanMagnitude = record[8].(float64)
 		}
 
 		// Append to the stars slice of Source structs:

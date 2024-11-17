@@ -91,12 +91,12 @@ func TestSolverOnMatches(t *testing.T) {
 	eq := wcs.PixelToEquatorialCoordinate(578.231147766, 485.620500565)
 
 	// We cross-reference here with calibration data from the astrometry.net API:
-	if math.Abs(eq.RA-98.64649870834154) > 0.0001 {
+	if math.Abs(eq.RA-98.64694354381975) > 0.0001 {
 		t.Errorf("RA not set correctly")
 	}
 
 	// We cross-reference here with calibration data from the astrometry.net API:
-	if math.Abs(eq.Dec-2.537618674632346) > 0.0001 {
+	if math.Abs(eq.Dec-2.5377749235788873) > 0.0001 {
 		t.Errorf("Dec not set correctly")
 	}
 

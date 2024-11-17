@@ -40,7 +40,7 @@ func TestQueryExecutedSuccessfully(t *testing.T) {
 	stars, err := q.PerformRadialSearch(astrometry.ICRSEquatorialCoordinate{
 		RA:  0,
 		Dec: 0,
-	}, 2.5, 10)
+	}, 2.5, 100, 10)
 
 	fmt.Println(err)
 
