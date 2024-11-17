@@ -63,7 +63,7 @@ func getCatalogSources(psc PlateSolverCatalog, eq astrometry.ICRSEquatorialCoord
 		// Create a new GAIA service client:
 		q := catalog.NewGAIAServiceClient()
 		// Perform a radial search with the given center and radius, for all sources with a magnitude less than 10:
-		return q.PerformRadialSearch(eq, radius, 8)
+		return q.PerformRadialSearch(eq, radius, 100, 8)
 	default:
 		return nil, errors.New("unsupported catalog")
 	}
