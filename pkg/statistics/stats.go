@@ -26,3 +26,36 @@ func NormalDistributedRandomNumber(mean, stdDev float64) float64 {
 }
 
 /*****************************************************************************************************************/
+
+// Poisson generates a Poisson-distributed random number with mean lambda.
+// lambda: the mean of the distribution.
+func PoissonDistributedRandomNumber(lambda float64) float64 {
+	// If lambda is less than 0, return 0:
+	if lambda < 0 {
+		return 0
+	}
+
+	// If lambda is 0, return 0:
+	if lambda == 0 {
+		return 0
+	}
+
+	// Calculate the exponential of -lambda:
+	L := math.Exp(-lambda)
+
+	// Initialize k, which is the number of random numbers generated:
+	k := 0.0
+
+	// Initialize p, which is the product of all random numbers generated:
+	p := 1.0
+
+	for p > L {
+		k++
+		u := rand.Float64()
+		p *= u
+	}
+
+	return k - 1
+}
+
+/*****************************************************************************************************************/
