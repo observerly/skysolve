@@ -100,7 +100,7 @@ func (g *GAIAServiceClient) Build() (string, error) {
 		) = 1 
 		AND phot_g_mean_mag < {{.Threshold}}
 		AND phot_rp_mean_flux IS NOT NULL
-		ORDER BY phot_g_mean_mag DESC;
+		ORDER BY phot_g_mean_mag ASC;
 	`
 
 	// Parse the ADQL query template:
