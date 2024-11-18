@@ -71,7 +71,7 @@ func NewGAIAServiceClient() *GAIAServiceClient {
 	// Create a custom HTTP client with the transport and overall timeout:
 	client := &http.Client{
 		Transport: transport,
-		Timeout:   10 * time.Second,
+		Timeout:   60 * time.Second,
 	}
 
 	return &GAIAServiceClient{
