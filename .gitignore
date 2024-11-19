@@ -25,3 +25,8 @@ go.work.sum
 .env
 .env.config
 !.env.*.example
+
+# SkySolve Specific Output
+.background
+.cache
+.output
