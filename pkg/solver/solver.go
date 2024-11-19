@@ -653,6 +653,144 @@ func (ps *PlateSolver) solveForForwardSIPParameters(
 
 /*****************************************************************************************************************/
 
+// solveForInverseSIPParameters fits higher-order SIP polynomials to the non-linear residuals after the
+// affine transformation.
+//
+// SIP’s Purpose for Non-linear Distortions: SIP is specifically designed to correct non-linear distortions.
+// Terms where  p + q <= 1  represent linear transformations, which are unnecessary in SIP since they’re covered
+// by the affine transformations.
+func (ps *PlateSolver) solveForInverseSIPParameters(
+	aX [][]float64,
+	aY [][]float64,
+	bX []float64,
+	bY []float64,
+	n int,
+	sipOrder int,
+) (*transform.SIP2DInverseParameters, error) {
+	// Calculate the number of terms in the SIP polynomial
+	numTerms := (sipOrder + 1) * (sipOrder + 2) / 2
+
+	// Convert design matrices and residual vectors into matrix objects
+	aSIP_X, err := matrix.NewFromSlice(iutils.Flatten2DFloat64Array(aX), n, numTerms)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SIP X matrix: %v", err)
+	}
+
+	bSIP_X, err := matrix.NewFromSlice(bX, n, 1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SIP X vector: %v", err)
+	}
+
+	aSIP_Y, err := matrix.NewFromSlice(iutils.Flatten2DFloat64Array(aY), n, numTerms)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SIP Y matrix: %v", err)
+	}
+
+	bSIP_Y, err := matrix.NewFromSlice(bY, n, 1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SIP Y vector: %v", err)
+	}
+
+	// Solve for SIP X coefficients
+	aSIPT_X, err := aSIP_X.Transpose()
+	if err != nil {
+		return nil, fmt.Errorf("failed to transpose SIP X matrix: %v", err)
+	}
+
+	aTaSIP_X, err := aSIPT_X.Multiply(aSIP_X)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute A^T * A for SIP X: %v", err)
+	}
+
+	aTbSIP_X, err := aSIPT_X.Multiply(bSIP_X)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute A^T * B for SIP X: %v", err)
+	}
+
+	aTaInvSIP_X, err := aTaSIP_X.Invert()
+	if err != nil {
+		return nil, fmt.Errorf("failed to invert A^T * A for SIP X: %v", err)
+	}
+
+	sipParamsX := make([]float64, numTerms)
+	for i := 0; i < numTerms; i++ {
+		for j := 0; j < numTerms; j++ {
+			sipParamsX[i] += aTaInvSIP_X.Value[i*numTerms+j] * aTbSIP_X.Value[j]
+		}
+	}
+
+	// Solve for SIP Y coefficients
+	aSIPT_Y, err := aSIP_Y.Transpose()
+	if err != nil {
+		return nil, fmt.Errorf("failed to transpose SIP Y matrix: %v", err)
+	}
+
+	aTaSIP_Y, err := aSIPT_Y.Multiply(aSIP_Y)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute A^T * A for SIP Y: %v", err)
+	}
+
+	aTbSIP_Y, err := aSIPT_Y.Multiply(bSIP_Y)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute A^T * B for SIP Y: %v", err)
+	}
+
+	aTaInvSIP_Y, err := aTaSIP_Y.Invert()
+	if err != nil {
+		return nil, fmt.Errorf("failed to invert A^T * A for SIP Y: %v", err)
+	}
+
+	sipParamsY := make([]float64, numTerms)
+	for i := 0; i < numTerms; i++ {
+		for j := 0; j < numTerms; j++ {
+			sipParamsY[i] += aTaInvSIP_Y.Value[i*numTerms+j] * aTbSIP_Y.Value[j]
+		}
+	}
+
+	// Map SIP coefficients to FITS term keys for X and Y
+	sipTermKeysA := utils.GeneratePolynomialTermKeys("AP", sipOrder)
+	sipTermKeysB := utils.GeneratePolynomialTermKeys("BP", sipOrder)
+
+	if len(sipTermKeysA) != numTerms || len(sipTermKeysB) != numTerms {
+		return nil, fmt.Errorf("incorrect number of SIP term keys: got %d for A and %d for B, expected %d each", len(sipTermKeysA), len(sipTermKeysB), numTerms)
+	}
+
+	aPowerMap := make(map[string]float64)
+	bPowerMap := make(map[string]float64)
+
+	// Zero out terms in sipParamsX where p + q <= 1
+	for idx, term := range sipTermKeysA {
+		var p, q int
+		fmt.Sscanf(term, "AP_%d_%d", &p, &q)
+		if p+q <= 1 {
+			sipParamsX[idx] = 0
+		}
+		aPowerMap[term] = sipParamsX[idx]
+	}
+
+	// Zero out terms in sipParamsY where p + q <= 1
+	for idx, term := range sipTermKeysB {
+		var p, q int
+		fmt.Sscanf(term, "BP_%d_%d", &p, &q)
+		if p+q <= 1 {
+			sipParamsY[idx] = 0
+		}
+		bPowerMap[term] = sipParamsY[idx]
+	}
+
+	// Create and return the inverse SIP parameters
+	sipParams := transform.SIP2DInverseParameters{
+		APOrder: sipOrder,
+		BPOrder: sipOrder,
+		APPower: aPowerMap,
+		BPPower: bPowerMap,
+	}
+
+	return &sipParams, nil
+}
+
+/*****************************************************************************************************************/
+
 func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance, sipOrder int) (*wcs.WCS, error) {
 	matches, err := ps.FindSourceMatches(tolerance)
 
@@ -696,35 +834,56 @@ func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance, sipOr
 		return nil, errors.New("failed to compute affine transformation matrix parameters")
 	}
 
-	// Compute residuals after Affine Transformation for SIP fitting:
-	residualsRA := make([]float64, n)
-	residualsDec := make([]float64, n)
+	// Compute residuals after Affine Transformation for forward SIP fitting:
 	A_SIP_RA := make([][]float64, n)
 	A_SIP_Dec := make([][]float64, n)
 	B_SIP_RA := make([]float64, n)
 	B_SIP_Dec := make([]float64, n)
 
+	// Compute residuals after Affine Transformation for inverse SIP fitting:
+	A_SIP_X := make([][]float64, n)
+	A_SIP_Y := make([][]float64, n)
+	B_SIP_X := make([]float64, n)
+	B_SIP_Y := make([]float64, n)
+
 	for i, match := range matches {
 		x := float64(match.Star.X)
 		y := float64(match.Star.Y)
+
+		ra := match.Source.RA
+		dec := match.Source.Dec
 
 		// Predicted RA and Dec using affine parameters
 		predRA := affineParams.A*x + affineParams.B*y + affineParams.E
 		predDec := affineParams.C*x + affineParams.D*y + affineParams.F
 
-		residualsRA[i] = match.Source.RA - predRA
-		residualsDec[i] = match.Source.Dec - predDec
-
 		// Generate polynomial terms for SIP fitting:
-		terms := utils.ComputePolynomialTerms(x, y, sipOrder)
+		fterms := utils.ComputePolynomialTerms(x, y, sipOrder)
 
 		// Assign polynomial terms to design matrices:
-		A_SIP_RA[i] = terms
-		A_SIP_Dec[i] = terms
+		A_SIP_RA[i] = fterms
+		A_SIP_Dec[i] = fterms
 
 		// Assign residuals as targets for SIP fitting:
-		B_SIP_RA[i] = residualsRA[i]
-		B_SIP_Dec[i] = residualsDec[i]
+		B_SIP_RA[i] = match.Source.RA - predRA
+		B_SIP_Dec[i] = match.Source.Dec - predDec
+
+		// Compute the inverse affine transformation to estimate pixel coordinates
+		det := affineParams.A*affineParams.D - affineParams.B*affineParams.C
+
+		xPred := (affineParams.D*(ra-affineParams.E) - affineParams.B*(dec-affineParams.F)) / det
+		yPred := (-affineParams.C*(ra-affineParams.E) + affineParams.A*(dec-affineParams.F)) / det
+
+		// Generate polynomial terms for inverse SIP (based on RA/Dec)
+		iterms := utils.ComputePolynomialTerms(ra, dec, sipOrder)
+
+		// Assign to inverse SIP design matrices
+		A_SIP_X[i] = iterms
+		A_SIP_Y[i] = iterms
+
+		// Inverse SIP residuals
+		B_SIP_X[i] = x - xPred
+		B_SIP_Y[i] = y - yPred
 	}
 
 	// Create the SIP parameters by solving the SIP polynomials from the residuals:
@@ -737,6 +896,16 @@ func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance, sipOr
 	// Check if the SIP parameters are nil:
 	if fsipParams == nil {
 		return nil, errors.New("failed to compute SIP transformation matrix parameters")
+	}
+
+	// Create the inverse SIP parameters by solving the SIP polynomials from the residuals:
+	isipParams, err := ps.solveForInverseSIPParameters(A_SIP_X, A_SIP_Y, B_SIP_X, B_SIP_Y, n, sipOrder)
+	if err != nil {
+		return nil, err
+	}
+
+	if isipParams == nil {
+		return nil, errors.New("failed to compute inverse SIP transformation matrix parameters")
 	}
 
 	// Calculate the x-coordinate of the center of the image:
@@ -754,6 +923,7 @@ func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance, sipOr
 			Projection:       wcs.RADEC_TANSIP,
 			AffineParams:     *affineParams,
 			SIPForwardParams: *fsipParams,
+			SIPInverseParams: *isipParams,
 		},
 	)
 
