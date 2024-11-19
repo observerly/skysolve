@@ -29,7 +29,7 @@ func TestNewWCS(t *testing.T) {
 		F: 0,
 	}
 
-	sip := transform.SIP2DParameters{
+	fsip := transform.SIP2DForwardParameters{
 		AOrder: 1,
 		BOrder: 1,
 		APower: map[string]float64{
@@ -45,9 +45,9 @@ func TestNewWCS(t *testing.T) {
 	}
 
 	wcs := NewWorldCoordinateSystem(1000, 1000, WCSParams{
-		AffineParams: affine,
-		Projection:   RADEC_TAN,
-		SIPParams:    sip,
+		AffineParams:     affine,
+		Projection:       RADEC_TAN,
+		SIPForwardParams: fsip,
 	})
 
 	if wcs.CRPIX1 != 1000 {
@@ -160,7 +160,7 @@ func TestPixelToEquatorialCoordinate(t *testing.T) {
 /*****************************************************************************************************************/
 
 func TestPixelToEquatorialCoordinateWithSIPDistortionAtImageCenter(t *testing.T) {
-	sip := transform.SIP2DParameters{
+	fsip := transform.SIP2DForwardParameters{
 		AOrder: 3,
 		BOrder: 3,
 		APower: map[string]float64{
@@ -192,7 +192,7 @@ func TestPixelToEquatorialCoordinateWithSIPDistortionAtImageCenter(t *testing.T)
 		CD1_2:  0.0,           // No rotation
 		CD2_1:  0.0,           // No rotation
 		CD2_2:  0.0002777778,  // 1/3600 deg/pixel
-		SIP:    sip,
+		FSIP:   fsip,
 	}
 
 	coordinate := wcs.PixelToEquatorialCoordinate(1024.0, 1024.0)
@@ -209,7 +209,7 @@ func TestPixelToEquatorialCoordinateWithSIPDistortionAtImageCenter(t *testing.T)
 /*****************************************************************************************************************/
 
 func TestPixelToEquatorialCoordinateWithSIPDistortion(t *testing.T) {
-	sip := transform.SIP2DParameters{
+	fsip := transform.SIP2DForwardParameters{
 		AOrder: 3,
 		BOrder: 3,
 		APower: map[string]float64{
@@ -241,7 +241,7 @@ func TestPixelToEquatorialCoordinateWithSIPDistortion(t *testing.T) {
 		CD1_2:  0.0,           // No rotation
 		CD2_1:  0.0,           // No rotation
 		CD2_2:  0.0002777778,  // 1/3600 deg/pixel
-		SIP:    sip,
+		FSIP:   fsip,
 	}
 
 	coordinate := wcs.PixelToEquatorialCoordinate(1000.0, 1000.0)
@@ -314,7 +314,7 @@ func TestEquatorialCoordinateToPixel(t *testing.T) {
 /*****************************************************************************************************************/
 
 func TestEquatorialCoordinateToPixelWithSIPDistortionAtImageCenter(t *testing.T) {
-	sip := transform.SIP2DParameters{
+	fsip := transform.SIP2DForwardParameters{
 		AOrder: 3,
 		BOrder: 3,
 		APower: map[string]float64{
@@ -372,7 +372,7 @@ func TestEquatorialCoordinateToPixelWithSIPDistortionAtImageCenter(t *testing.T)
 		CD1_2:  0.0,           // No rotation
 		CD2_1:  0.0,           // No rotation
 		CD2_2:  0.0002777778,  // 1/3600 deg/pixel
-		SIP:    sip,
+		FSIP:   fsip,
 		ISIP:   isip,
 	}
 
@@ -394,7 +394,7 @@ func TestEquatorialCoordinateToPixelWithSIPDistortionAtImageCenter(t *testing.T)
 /*****************************************************************************************************************/
 
 func TestEquatorialCoordinateToPixelWithSIPDistortion(t *testing.T) {
-	sip := transform.SIP2DParameters{
+	fsip := transform.SIP2DForwardParameters{
 		AOrder: 3,
 		BOrder: 3,
 		APower: map[string]float64{
@@ -452,7 +452,7 @@ func TestEquatorialCoordinateToPixelWithSIPDistortion(t *testing.T) {
 		CD1_2:  0.0,           // No rotation
 		CD2_1:  0.0,           // No rotation
 		CD2_2:  0.0002777778,  // 1/3600 deg/pixel
-		SIP:    sip,
+		FSIP:   fsip,
 		ISIP:   isip,
 	}
 
