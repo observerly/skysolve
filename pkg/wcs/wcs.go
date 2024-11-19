@@ -62,7 +62,7 @@ func (c CoordinateProjectionType) ToCTypes() CTypeP {
 type WCSParams struct {
 	Projection       CoordinateProjectionType         // Projection type e.g., "TAN", or "TAN-SIP"
 	AffineParams     transform.Affine2DParameters     // Affine transformation parameters
-	SIPParams        transform.SIP2DParameters        // SIP transformation (distortion) coefficients, x, y to RA, Dec
+	SIPForwardParams transform.SIP2DForwardParameters // SIP forward transformation (distortion) coefficients, x, y to RA, Dec
 	SIPInverseParams transform.SIP2DInverseParameters // SIP inverse transformation (distortion) coefficients RA, Dec to x, y
 }
 
@@ -86,7 +86,7 @@ type WCS struct {
 	CD2_2  float64                          `hdu:"CD2_2"`                     // Affine transform parameter D (no default)
 	E      float64                          `hdu:"E"`                         // Affine translation parameter e (optional, no default)
 	F      float64                          `hdu:"F"`                         // Affine translation parameter f (optional, no default)
-	SIP    transform.SIP2DParameters        ``                                // SIP transformation (distortion) coefficients
+	FSIP   transform.SIP2DForwardParameters ``                                // SIP forward transformation (distortion) coefficients
 	ISIP   transform.SIP2DInverseParameters ``                                // SIP inverse transformation (distortion) coefficients
 }
 
@@ -113,7 +113,7 @@ func NewWorldCoordinateSystem(xc float64, yc float64, params WCSParams) WCS {
 		CD2_2:  params.AffineParams.D,
 		E:      params.AffineParams.E,
 		F:      params.AffineParams.F,
-		SIP:    params.SIPParams,
+		FSIP:   params.SIPForwardParams,
 		ISIP:   params.SIPInverseParams,
 	}
 
@@ -168,7 +168,7 @@ func (wcs *WCS) PixelToEquatorialCoordinate(
 	B := 0.0
 
 	// Apply A polynomial corrections:
-	for term, coeff := range wcs.SIP.APower {
+	for term, coeff := range wcs.FSIP.APower {
 		i, j, err := parseSIPTerm(term, "A")
 		if err != nil {
 			continue
@@ -177,7 +177,7 @@ func (wcs *WCS) PixelToEquatorialCoordinate(
 	}
 
 	// Apply B polynomial corrections:
-	for term, coeff := range wcs.SIP.BPower {
+	for term, coeff := range wcs.FSIP.BPower {
 		i, j, err := parseSIPTerm(term, "B")
 		if err != nil {
 			continue

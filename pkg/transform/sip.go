@@ -15,7 +15,11 @@ package transform
 // Coordinate System (WCS) by introducing higher-order polynomial terms that account for non-linear
 // optical distortions, such as those introduced by telescope optics or atmospheric effects.
 // @see https://fits.gsfc.nasa.gov/registry/sip/SIP_distortion_v1_0.pdf
-type SIP2DParameters struct {
+
+/*****************************************************************************************************************/
+
+// The forward parameters are polynomial coefficients used to map from pixel coordinates to world coordinates.
+type SIP2DForwardParameters struct {
 	AOrder int
 	APower map[string]float64
 	BOrder int
@@ -24,6 +28,7 @@ type SIP2DParameters struct {
 
 /*****************************************************************************************************************/
 
+// The inverse paramaters are polynomial coefficients used to map from world coordinates to pixel coordinates.
 type SIP2DInverseParameters struct {
 	APOrder int
 	APPower map[string]float64

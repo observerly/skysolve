@@ -517,19 +517,20 @@ func (ps *PlateSolver) solveForAffineParameters(
 
 /*****************************************************************************************************************/
 
-// solveForSIPParameters fits higher-order SIP polynomials to the non-linear residuals after the affine transformation.
+// solveForForwardSIPParameters fits higher-order SIP polynomials to the non-linear residuals after the
+// affine transformation.
 //
 // SIP’s Purpose for Non-linear Distortions: SIP is specifically designed to correct non-linear distortions.
 // Terms where  p + q <= 1  represent linear transformations, which are unnecessary in SIP since they’re covered
 // by the affine transformations.
-func (ps *PlateSolver) solveForSIPParameters(
+func (ps *PlateSolver) solveForForwardSIPParameters(
 	aRA [][]float64,
 	aDec [][]float64,
 	bRA []float64,
 	bDec []float64,
 	n int,
 	sipOrder int,
-) (*transform.SIP2DParameters, error) {
+) (*transform.SIP2DForwardParameters, error) {
 	// Calculate the number of terms in the SIP polynomial:
 	numTerms := (sipOrder + 1) * (sipOrder + 2) / 2
 
@@ -640,7 +641,7 @@ func (ps *PlateSolver) solveForSIPParameters(
 		bPowerMap[term] = sipParamsDec[idx]
 	}
 
-	sipParams := transform.SIP2DParameters{
+	sipParams := transform.SIP2DForwardParameters{
 		AOrder: sipOrder,
 		BOrder: sipOrder,
 		APower: aPowerMap,
@@ -727,14 +728,14 @@ func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance, sipOr
 	}
 
 	// Create the SIP parameters by solving the SIP polynomials from the residuals:
-	sipParams, err := ps.solveForSIPParameters(A_SIP_RA, A_SIP_Dec, B_SIP_RA, B_SIP_Dec, n, sipOrder)
+	fsipParams, err := ps.solveForForwardSIPParameters(A_SIP_RA, A_SIP_Dec, B_SIP_RA, B_SIP_Dec, n, sipOrder)
 
 	if err != nil {
 		return nil, err
 	}
 
 	// Check if the SIP parameters are nil:
-	if sipParams == nil {
+	if fsipParams == nil {
 		return nil, errors.New("failed to compute SIP transformation matrix parameters")
 	}
 
@@ -750,9 +751,9 @@ func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance, sipOr
 		x,
 		y,
 		wcs.WCSParams{
-			Projection:   wcs.RADEC_TANSIP,
-			AffineParams: *affineParams,
-			SIPParams:    *sipParams,
+			Projection:       wcs.RADEC_TANSIP,
+			AffineParams:     *affineParams,
+			SIPForwardParams: *fsipParams,
 		},
 	)
 

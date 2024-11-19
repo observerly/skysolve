@@ -14,8 +14,8 @@ import "testing"
 
 /*****************************************************************************************************************/
 
-func TestSIP2DParameters(t *testing.T) {
-	sip := SIP2DParameters{
+func TestSIP2DForwardParameters(t *testing.T) {
+	sip := SIP2DForwardParameters{
 		AOrder: 1,
 		BOrder: 1,
 		APower: map[string]float64{
