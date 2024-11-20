@@ -12,7 +12,9 @@ package adql
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"text/template"
@@ -70,6 +72,61 @@ func (t *TapClient) BuildADQLQuery(templateStr string, data interface{}) (string
 
 	// Return the constructed ADQL query:
 	return buf.String(), nil
+}
+
+/*****************************************************************************************************************/
+
+// ExecuteQuery sends the ADQL query to the TAP service and returns the parsed response.
+func (t *TapClient) ExecuteADQLQuery(adqlQuery string) (*TapResponse, error) {
+	formData := url.Values{}
+	formData.Set("REQUEST", "doQuery")
+	formData.Set("LANG", "ADQL")
+	formData.Set("FORMAT", "json")
+	formData.Set("QUERY", adqlQuery)
+
+	req, err := http.NewRequest("POST", t.URI, bytes.NewBufferString(formData.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	// Set the content type to form encoded data:
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// Set the content length:
+	req.Header.Set("Content-Length", fmt.Sprintf("%d", len(formData.Encode())))
+
+	// Set any additional headers:
+	for key, value := range t.Headers {
+		req.Header.Set(key, value)
+	}
+
+	// Perform the HTTP request:
+	resp, err := t.Client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read the response body:
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Check the response status code:
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TAP query failed with status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	// Parse the JSON response:
+	var tapResp TapResponse
+	err = json.Unmarshal(bodyBytes, &tapResp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	// Return the parsed response:
+	return &tapResp, nil
 }
 
 /*****************************************************************************************************************/
