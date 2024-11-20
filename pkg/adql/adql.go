@@ -12,6 +12,7 @@ package adql
 
 import (
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -29,6 +30,22 @@ type TapClient struct {
 	Client  *http.Client
 	Timeout time.Duration
 	Headers map[string]string
+}
+
+/*****************************************************************************************************************/
+
+// NewTapClient initializes a new generic TAP ADQL client with optional configurations.
+func NewTapClient(serviceURL url.URL, timeout time.Duration, headers map[string]string) *TapClient {
+	client := &http.Client{
+		Timeout: timeout,
+	}
+
+	return &TapClient{
+		URI:     serviceURL.String(),
+		Client:  client,
+		Timeout: timeout,
+		Headers: headers,
+	}
 }
 
 /*****************************************************************************************************************/
