@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/observerly/iris/pkg/fits"
+	"github.com/observerly/skysolve/pkg/astrometry"
 	"github.com/observerly/skysolve/pkg/geometry"
 	"github.com/observerly/skysolve/pkg/solver"
 )
@@ -57,18 +58,34 @@ func main() {
 		return
 	}
 
+	eq := astrometry.ICRSEquatorialCoordinate{
+		RA:  float64(ra.Value),
+		Dec: float64(dec.Value),
+	}
+
+	radius := 2.0
+
+	// Perform a radial search with the given center and radius, for all sources with a magnitude less than 10:
+	sources, err := solver.GetCatalogSources(solver.GAIA, eq, radius)
+
+	if err != nil {
+		fmt.Printf("there was an error while performing the radial search: %v", err)
+		return
+	}
+
 	// Attempt to create a new PlateSolver:
-	solver, err := solver.NewPlateSolver(solver.GAIA, fit, solver.Params{
+	solver, err := solver.NewPlateSolver(fit, solver.Params{
 		RA:                  float64(ra.Value),  // The appoximate RA of the center of the image
 		Dec:                 float64(dec.Value), // The appoximate Dec of the center of the image
 		PixelScale:          2.061 / 3600.0,     // 2.061 arcseconds per pixel (0.0005725 degrees)
-		ExtractionThreshold: 80,                 // Extract a minimum of 80 of the brightest stars
+		ExtractionThreshold: 50,                 // Extract a minimum of 80 of the brightest stars
 		Radius:              16,                 // 16 pixels radius for the star extraction
 		Sigma:               8,                  // 8 pixels sigma for the Gaussian kernel
+		Sources:             sources,
 	})
 
 	if err != nil {
-		fmt.Printf("error: %v", err)
+		fmt.Printf("there was an error while creating the plate solver: %v", err)
 		return
 	}
 
@@ -93,7 +110,7 @@ func main() {
 	fmt.Println(elapsedTime)
 
 	// Calculate the reference equatorial coordinate:
-	eq := wcs.PixelToEquatorialCoordinate(578.231147766, 485.620500565)
+	eq = wcs.PixelToEquatorialCoordinate(578.231147766, 485.620500565)
 
 	fmt.Println(eq)
 }

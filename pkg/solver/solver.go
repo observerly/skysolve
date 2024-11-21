@@ -57,7 +57,7 @@ type PlateSolver struct {
 
 /*****************************************************************************************************************/
 
-func getCatalogSources(psc PlateSolverCatalog, eq astrometry.ICRSEquatorialCoordinate, radius float64) ([]catalog.Source, error) {
+func GetCatalogSources(psc PlateSolverCatalog, eq astrometry.ICRSEquatorialCoordinate, radius float64) ([]catalog.Source, error) {
 	switch psc {
 	case GAIA:
 		// Create a new GAIA service client:
@@ -78,21 +78,15 @@ type Params struct {
 	ExtractionThreshold float64
 	Radius              float32
 	Sigma               float32
+	Sources             []catalog.Source
 }
 
 /*****************************************************************************************************************/
 
 func NewPlateSolver(
-	psc PlateSolverCatalog,
 	fit *fits.FITSImage,
 	params Params,
 ) (*PlateSolver, error) {
-	var (
-		stars   []photometry.Star
-		sources []catalog.Source
-		err     error
-	)
-
 	ra := params.RA
 
 	dec := params.Dec
@@ -100,6 +94,10 @@ func NewPlateSolver(
 	radius := params.Radius
 
 	sigma := params.Sigma
+
+	stars := []photometry.Star{}
+
+	sources := params.Sources
 
 	if fit == nil {
 		return nil, errors.New("invalid FITS image")
@@ -119,7 +117,7 @@ func NewPlateSolver(
 
 	// Setup two wait groups for the sources lookup and the stars extractor:
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 
 	// Extract bright pixels (stars) from the image:
 	go func() {
@@ -151,35 +149,14 @@ func NewPlateSolver(
 		stars = stars[:minimum]
 	}()
 
-	// Get the sources from the catalog within the search radius, using the approximate RA and Dec coordinates
-	// from the FITS HDU (header):
-	go func() {
-		defer wg.Done()
-
-		sources, err = getCatalogSources(psc, astrometry.ICRSEquatorialCoordinate{
-			RA:  ra,
-			Dec: dec,
-		}, 2)
-
-		if err != nil {
-			return
-		}
-	}()
-
 	// Wait for both goroutines to finish
 	wg.Wait()
 
 	// Reset the fit.Data to an empty float32 array to preserve memory:
 	d = []float32{}
 
-	// If we encounter an error when retrieving the sources from the catalog, return the error:
-	if err != nil {
-		return nil, err
-	}
-
 	// Return a new PlateSolver object with the catalog, stars, sources, RA, Dec, and pixel scale:
 	return &PlateSolver{
-		Catalog:    psc,
 		Stars:      stars,
 		Sources:    sources,
 		RA:         ra,
