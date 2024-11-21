@@ -140,6 +140,60 @@ func NewSimulatedSky(xs int, ys int, eq astrometry.ICRSEquatorialCoordinate, par
 
 /*****************************************************************************************************************/
 
+// generateMoffatProfile generates a flattened Moffat profile and returns it along with its bounds and dimensions.
+// This function is independent of the SimulatedSkyImage struct.
+//
+//lint:ignore U1000 Reserved for future implementation.
+func generateMoffatProfile(
+	x0, y0 float64,
+	xMin, xMax, yMin, yMax int, flux float64,
+	beta float64, precisionX, precisionY float64,
+) ([]float64, int, int) {
+	width := xMax - xMin + 1
+	height := yMax - yMin + 1
+	totalPixels := width * height
+	profile := make([]float64, totalPixels)
+
+	totalIntensity := 0.0
+
+	// Single loop iterating over all pixels in the grid:
+	for idx := 0; idx < totalPixels; idx++ {
+		// Map idx to y and x coordinates:
+		yIdx := idx / width
+		xIdx := idx % width
+
+		// Calculate the pixel coordinates:
+		y := yMin + yIdx
+		x := xMin + xIdx
+
+		// Calculate the distance from the center of the profile:
+		dy := float64(y) - y0 + 0.5
+		dx := float64(x) - x0 + 0.5
+
+		// Compute r using precomputed inverses:
+		r := (dx*dx)*precisionX + (dy*dy)*precisionY
+
+		// Calculate the intensity using the Moffat profile:
+		intensity := math.Exp(-beta * math.Log(1.0+r))
+
+		// Assign intensity to profile and accumulate sum of intensities:
+		profile[idx] = intensity
+
+		// Accumulate total intensity:
+		totalIntensity += intensity
+	}
+
+	// Normalize and scale by total flux:
+	scaleFactor := flux / totalIntensity
+	for i := 0; i < totalPixels; i++ {
+		profile[i] *= scaleFactor
+	}
+
+	return profile, width, height
+}
+
+/*****************************************************************************************************************/
+
 //lint:ignore U1000 Reserved for future implementation.
 func (s *SimulatedSkyImage) normaliseFieldImage(data []float64, width, height int) ([][]uint32, error) {
 	// Initialize the 2D slice with the desired height.
