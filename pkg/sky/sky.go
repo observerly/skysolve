@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/observerly/skysolve/pkg/astrometry"
+	"github.com/observerly/skysolve/pkg/catalog"
 	stats "github.com/observerly/skysolve/pkg/statistics"
 	"github.com/observerly/skysolve/pkg/transform"
 	"github.com/observerly/skysolve/pkg/wcs"
@@ -142,8 +143,6 @@ func NewSimulatedSky(xs int, ys int, eq astrometry.ICRSEquatorialCoordinate, par
 
 // generateMoffatProfile generates a flattened Moffat profile and returns it along with its bounds and dimensions.
 // This function is independent of the SimulatedSkyImage struct.
-//
-//lint:ignore U1000 Reserved for future implementation.
 func generateMoffatProfile(
 	x0, y0 float64,
 	xMin, xMax, yMin, yMax int, flux float64,
@@ -194,7 +193,6 @@ func generateMoffatProfile(
 
 /*****************************************************************************************************************/
 
-//lint:ignore U1000 Reserved for future implementation.
 func (s *SimulatedSkyImage) normaliseFieldImage(data []float64, width, height int) ([][]uint32, error) {
 	// Initialize the 2D slice with the desired height.
 	image := make([][]uint32, height)
@@ -251,6 +249,89 @@ func (s *SimulatedSkyImage) GenerateBackgroundImage() ([]float64, error) {
 	}
 
 	return image, nil
+}
+
+/*****************************************************************************************************************/
+
+// GenerateFieldImage generates the star field image by placing sources onto the image data.
+func (s *SimulatedSkyImage) GenerateFieldImage(sources []catalog.Source) ([][]uint32, error) {
+	// Initialize a flat base image with zeros for the entire field:
+	image, err := s.GenerateBackgroundImage()
+
+	// If we failed to generate the background image, return the error:
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate the aperture area in m²:
+	apertureArea := math.Pi * math.Pow(s.ApertureDiameter/2.0, 2)
+
+	// Precompute flux density factor for sources:
+	fluxDensity := s.AverageQuantumEfficiency * s.ExposureDuration * apertureArea
+
+	// Calculate FWHM in pixels in the x dimension for the Moffat profile:
+	fwhmPixelsX := s.Seeing / (s.PixelScaleX * 3600.0)
+
+	// Calculate FWHM in pixels in the y dimension for the Moffat profile:
+	fwhmPixelsY := s.Seeing / (s.PixelScaleY * 3600.0)
+
+	// Calculate the precesion factor in the x dimension for the Moffat profile:
+	precisionX := math.Pow(fwhmPixelsX, -2)
+
+	// Calculate the precesion factor in the y dimension for the Moffat profile:
+	precisionY := math.Pow(fwhmPixelsY, -2)
+
+	// Calculate beta for the Moffat profile using the flux of the source, such that brighter sources have a smaller beta:
+	beta := 3.0
+
+	// Add stars to the image
+	for _, source := range sources {
+		// Calculate flux in e⁻ for this source:
+		e := source.PhotometricGMeanFlux * fluxDensity * math.Pow(10, -0.4*source.PhotometricGMeanMagnitude)
+
+		scale := float64(((s.Width + s.Height) / 2)) * math.Pow(10, -0.2*source.PhotometricGMeanMagnitude)
+
+		// Calculate render radius in the x dimension for the Moffat profile:
+		renderRadiusX := fwhmPixelsX * scale
+
+		// Calculate render radius in the y dimension for the Moffat profile:
+		renderRadiusY := fwhmPixelsY * scale
+
+		// Transform source RA and Dec to pixel coordinates
+		x0, y0 := s.WCS.EquatorialCoordinateToPixel(source.RA, source.Dec)
+
+		// Skip sources outside the image frame (RA, Dec out of bounds):
+		if x0 < 0 || x0 >= float64(s.Width) || y0 < 0 || y0 >= float64(s.Height) {
+			continue
+		}
+
+		// Determine the grid bounds for the individual source:
+		xMin := int(math.Max(0, x0-renderRadiusX))
+		xMax := int(math.Min(float64(s.Width-1), x0+renderRadiusX))
+		yMin := int(math.Max(0, y0-renderRadiusY))
+		yMax := int(math.Min(float64(s.Height-1), y0+renderRadiusY))
+
+		// Generate Moffat profile for the source:
+		profile, width, height := generateMoffatProfile(
+			x0, y0, xMin, xMax, yMin, yMax, e, beta, precisionX, precisionY,
+		)
+
+		// Add profile to the image with clipping:
+		for idx := 0; idx < width*height; idx++ {
+			yIdx := idx / width
+			xIdx := idx % width
+
+			imageY := yIdx + yMin
+			imageX := xIdx + xMin
+
+			if imageY >= 0 && imageY < s.Height && imageX >= 0 && imageX < s.Width {
+				image[imageY*s.Width+imageX] += profile[idx]
+			}
+		}
+	}
+
+	// Normalize and convert to 2D image:
+	return s.normaliseFieldImage(image, s.Width, s.Height)
 }
 
 /*****************************************************************************************************************/
