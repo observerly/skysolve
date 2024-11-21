@@ -11,8 +11,12 @@ package sky
 /*****************************************************************************************************************/
 
 import (
+	"fmt"
+	"math"
 	"time"
 
+	"github.com/observerly/skysolve/pkg/astrometry"
+	"github.com/observerly/skysolve/pkg/transform"
 	"github.com/observerly/skysolve/pkg/wcs"
 )
 
@@ -61,6 +65,75 @@ type SimulatedSkyImage struct {
 	SkyBackground            float64
 	Seeing                   float64
 	AverageQuantumEfficiency float64
+}
+
+/*****************************************************************************************************************/
+
+func NewSimulatedSky(xs int, ys int, eq astrometry.ICRSEquatorialCoordinate, params Params) (*SimulatedSkyImage, error) {
+	// Check that the image dimensions are positive (realistic):
+	if xs <= 0 || ys <= 0 {
+		return nil, fmt.Errorf("image dimensions must be positive")
+	}
+
+	// Check that the pixel sizes are positive:
+	if params.PixelSizeX <= 0 || params.PixelSizeY <= 0 {
+		return nil, fmt.Errorf("pixel sizes must be positive")
+	}
+
+	// Check that we have a realistic seeing value:
+	if params.Seeing <= 0 {
+		return nil, fmt.Errorf("seeing (FWHM) must be positive")
+	}
+
+	// Check that the exposure time is positive:
+	if params.ExposureDuration <= time.Duration(0) {
+		return nil, fmt.Errorf("exposure time must be positive")
+	}
+
+	// Calculate pixel scale in degrees per pixel from the pixel size and focal length:
+	pixelScaleX := (params.PixelSizeX / params.FocalLength) * (180 / math.Pi)
+
+	// Calculate pixel scale in degrees per pixel from the pixel size and focal length:
+	pixelScaleY := (params.PixelSizeY / params.FocalLength) * (180 / math.Pi)
+
+	wcsParams := wcs.WCSParams{
+		Projection: wcs.RADEC_TAN,
+		AffineParams: transform.Affine2DParameters{
+			A: pixelScaleX,
+			B: 0,
+			C: 0,
+			D: -pixelScaleY,
+			E: eq.RA,
+			F: eq.Dec,
+		},
+	}
+
+	// Create a new WCS object, centered at the center of the image:
+	wcs := wcs.NewWorldCoordinateSystem(float64(xs)/2, float64(ys)/2, wcsParams)
+
+	// Return a new SimulatedSkyImage object:
+	return &SimulatedSkyImage{
+		RA:                       eq.RA,
+		Dec:                      eq.Dec,
+		WCS:                      wcs,
+		Width:                    xs,
+		Height:                   ys,
+		ExposureDuration:         params.ExposureDuration.Seconds(),
+		MaxADU:                   params.MaxADU,
+		BiasOffset:               params.BiasOffset,
+		Gain:                     params.Gain,
+		ReadNoise:                params.ReadNoise,
+		DarkCurrent:              params.DarkCurrent,
+		BinningX:                 params.BinningX,
+		BinningY:                 params.BinningY,
+		PixelScaleX:              pixelScaleX,
+		PixelScaleY:              pixelScaleY,
+		FocalLength:              params.FocalLength,
+		ApertureDiameter:         params.ApertureDiameter,
+		SkyBackground:            params.SkyBackground,
+		Seeing:                   params.Seeing,
+		AverageQuantumEfficiency: params.AverageQuantumEfficiency,
+	}, nil
 }
 
 /*****************************************************************************************************************/
