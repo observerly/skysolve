@@ -34,7 +34,7 @@ func IsWithinICRSPolarRadius(ra, dec, r float64) bool {
 
 /*****************************************************************************************************************/
 
-func TestQueryExecutedSuccessfully(t *testing.T) {
+func TestGAIAQueryExecutedSuccessfully(t *testing.T) {
 	var q = NewGAIAServiceClient()
 
 	stars, err := q.PerformRadialSearch(astrometry.ICRSEquatorialCoordinate{
