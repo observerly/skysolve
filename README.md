@@ -1,5 +1,10 @@
 # skysolve
 
+![GitHub go.mod Go version (branch & subdirectory of monorepo)](https://img.shields.io/github/go-mod/go-version/observerly/skysolve/main?filename=go.mod&label=Go)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/observerly/skysolve)](https://pkg.go.dev/github.com/observerly/skysolve)
+[![Go Report Card](https://goreportcard.com/badge/github.com/observerly/skysolve)](https://goreportcard.com/report/github.com/observerly/skysolve)
+[![SkySolve Actions Status](https://github.com/observerly/skysolve/actions/workflows/ci.yml/badge.svg)](https://github.com/observerly/skysolve/actions/workflows/ci.yml)
+
 ### Introduction
 
 skysolve is a high-performance, zero-dependency Go library designed for plate solving astronomical images.
@@ -7,6 +12,10 @@ skysolve is a high-performance, zero-dependency Go library designed for plate so
 While many plate solving algorithms operate under the assumption of having no prior knowledge of an image’s location in the sky, most observatories typically have a rough estimate of where their telescopes are pointed. skysolve leverages this existing pointing information to deliver faster and more accurate plate solving solutions.
 
 When provided with the approximate equatorial coordinates of an image and the detector’s field of view, skysolve can compute a World Coordinate System (WCS) for the image in under a second. This efficiency makes it an excellent choice for tasks in astrometry, photometry, and other astronomical image processing applications that demand high performance, including Space Situational Awareness (SSA) and Space Domain Awareness (SDA).
+
+### Prerequisites
+
+- [go](https://go.dev/) (>= 1.21.*)
 
 ### Why SkySolve?
 
@@ -29,6 +38,103 @@ Corrects for optical distortions and projection effects, ensuring accurate repre
 #### Adheres To FITS Standards
 
 WCS Compliant: Generates World Coordinate System (WCS) solutions that adhere to the FITS standard, ensuring compatibility with existing astronomical software and tools.
+
+
+#### Usage
+
+SkySolve is designed to interoperate between IRIS, a FITs image processing library [observerly/iris](), and the GAIA DR3 catalog. The following example demonstrates how to use SkySolve to plate solve an astronomical image:
+
+```go
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/observerly/iris/pkg/fits"
+	"github.com/observerly/skysolve/pkg/astrometry"
+	"github.com/observerly/skysolve/pkg/geometry"
+	"github.com/observerly/skysolve/pkg/solver"
+)
+
+func main() {
+	// Attempt to open the file from the given filepath:
+	file, err := os.Open("<PATH_TO_YOUR_IMAGE>.fits")
+	if err != nil {
+		fmt.Printf("failed to open file: %v", err)
+		return
+	}
+	// Defer closing the file:
+	defer file.Close()
+
+	// Assume an image of 2x2 pixels with 16-bit depth, and no offset:
+	fit := fits.NewFITSImage(2, 0, 0, 65535)
+
+	// Read in our exposure data into the image:
+	err = fit.Read(file)
+
+	if err != nil {
+		fmt.Printf("failed to read fits file: %v", err)
+	}
+
+	// Attempt to get the RA header from the FITS file:
+	ra, exists := fit.Header.Floats["RA"]
+	if !exists {
+		fmt.Printf("ra header not found")
+		return
+	}
+
+	// Attempt to get the Dec header from the FITS file:
+	dec, exists := fit.Header.Floats["DEC"]
+	if !exists {
+		fmt.Println("dec header not found")
+		return
+	}
+
+	eq := astrometry.ICRSEquatorialCoordinate{
+		RA:  float64(ra.Value),
+		Dec: float64(dec.Value),
+	}
+
+	// 2 degree radial search field:
+	radius := 2.0
+
+	// Perform a radial search with the given center and radius, for all sources with a magnitude less than 10:
+	sources, err := solver.GetCatalogSources(solver.GAIA, eq, radius)
+	if err != nil {
+		fmt.Printf("there was an error while performing the radial search: %v", err)
+		return
+	}
+
+	// Attempt to create a new PlateSolver:
+	solver, err := solver.NewPlateSolver(fit, solver.Params{
+		RA:                  float64(ra.Value),  // The appoximate RA of the center of the image
+		Dec:                 float64(dec.Value), // The appoximate Dec of the center of the image
+		PixelScale:          2.061 / 3600.0,     // 2.061 arcseconds per pixel (0.0005725 degrees)
+		ExtractionThreshold: 50,                 // Extract a minimum of 50 of the brightest stars
+		Radius:              16,                 // 16 pixels radius for the star extraction
+		Sigma:               8,                  // 8 pixels sigma for the Gaussian kernel
+		Sources:             sources,
+	})
+	if err != nil {
+		fmt.Printf("there was an error while creating the plate solver: %v", err)
+		return
+	}
+
+	// Define the tolerances for the solver, we can adjust these as needed:
+	tolerances := geometry.InvariantFeatureTolerance{
+		LengthRatio: 0.025, // 5% tolerance in side length ratios
+		Angle:       0.5,   // 1 degree tolerance in angles
+	}
+
+	// Extract the WCS solution from the solver:
+	wcs, err := solver.Solve(tolerances, 3)
+	if err != nil {
+		fmt.Printf("an error occured while plate solving: %v", err)
+		return
+	}
+}
+```
 
 ### Algorithm & Methodology
 
