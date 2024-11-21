@@ -13,9 +13,11 @@ package sky
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"time"
 
 	"github.com/observerly/skysolve/pkg/astrometry"
+	stats "github.com/observerly/skysolve/pkg/statistics"
 	"github.com/observerly/skysolve/pkg/transform"
 	"github.com/observerly/skysolve/pkg/wcs"
 )
@@ -167,6 +169,31 @@ func (s *SimulatedSkyImage) normaliseFieldImage(data []float64, width, height in
 
 		// Store the rounded value as uint32 in the flat slice.
 		flatImage[index] = uint32(math.Round(value))
+	}
+
+	return image, nil
+}
+
+/*****************************************************************************************************************/
+
+func (s *SimulatedSkyImage) GenerateBackgroundImage() ([]float64, error) {
+	// Calculate the aperture area in m²:
+	apertureArea := math.Pi * math.Pow(s.ApertureDiameter/2.0, 2)
+
+	// Calculate sky background per pixel in e⁻/s/pixel:
+	skyBackgroundPerPixel := s.SkyBackground * apertureArea * s.PixelScaleX * s.PixelScaleY * 3600.0 * 3600.0
+
+	// Initialize a flat base image with zeros for the entire field:
+	image := make([]float64, s.Width*s.Height)
+
+	// Precompute background noise, which is the sum of dark current, read noise, and sky background:
+	background := stats.PoissonDistributedRandomNumber(s.DarkCurrent*s.ExposureDuration) +
+		stats.NormalDistributedRandomNumber(0.0, s.ReadNoise) +
+		stats.PoissonDistributedRandomNumber(skyBackgroundPerPixel*s.ExposureDuration)
+
+	// Add background to the entire image with some random noise:
+	for i := range image {
+		image[i] += background * rand.Float64()
 	}
 
 	return image, nil
