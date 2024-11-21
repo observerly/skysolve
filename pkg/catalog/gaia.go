@@ -11,17 +11,11 @@ package catalog
 /*****************************************************************************************************************/
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net"
-	"net/http"
 	"net/url"
-	"strings"
-	"text/template"
 	"time"
 
+	"github.com/observerly/skysolve/pkg/adql"
 	"github.com/observerly/skysolve/pkg/astrometry"
 )
 
@@ -31,16 +25,15 @@ type GAIAQuery struct {
 	RA        float64 // right ascension (in degrees)
 	Dec       float64 // right ascension (in degrees)
 	Radius    float64 // search radius (in degrees)
-	Limit     float64 // maximum number of records to return
+	Limit     int     // maximum number of records to return
 	Threshold float64 // limiting magnitude
 }
 
 /*****************************************************************************************************************/
 
 type GAIAServiceClient struct {
-	URI    string
-	Query  GAIAQuery
-	Client *http.Client
+	*adql.TapClient
+	Query GAIAQuery
 }
 
 /*****************************************************************************************************************/
@@ -57,41 +50,39 @@ type GAIAResponse struct {
 // parallaxes, and proper motions, are given for around 1.46 billion sources, with a limiting magnitude
 // of G = 21.
 func NewGAIAServiceClient() *GAIAServiceClient {
-	// Create a custom dialer with a timeout of 5 seconds:
-	dialer := &net.Dialer{
-		Timeout: 5 * time.Second,
+	// https://gea.esac.esa.int/tap-server/tap/sync
+	url := url.URL{
+		Scheme: "https",
+		Host:   "gea.esac.esa.int",
+		Path:   "/tap-server/tap/sync",
 	}
 
-	// Create a custom transport with the dialer and a TLS handshake timeout of 1 second:
-	transport := &http.Transport{
-		DialContext:         dialer.DialContext,
-		TLSHandshakeTimeout: 1 * time.Second,
+	headers := map[string]string{
+		// Default content type for TAP services
+		"Content-Type": "application/x-www-form-urlencoded",
+		// Ensure we are good citizens and identify ourselves:
+		"X-Requested-By": "@observerly/skysolve",
 	}
 
-	// Create a custom HTTP client with the transport and overall timeout:
-	client := &http.Client{
-		Transport: transport,
-		Timeout:   60 * time.Second,
-	}
+	client := adql.NewTapClient(url, 60*time.Second, headers)
 
 	return &GAIAServiceClient{
-		URI:    "https://gea.esac.esa.int/tap-server/tap/sync",
-		Query:  GAIAQuery{},
-		Client: client,
+		TapClient: client,
+		Query:     GAIAQuery{},
 	}
 }
 
 /*****************************************************************************************************************/
 
-const record = `source_id, designation, ra, dec, pmra, pmdec, parallax, phot_rp_mean_flux, phot_g_mean_mag`
+const gaiaRecord = `source_id, designation, ra, dec, pmra, pmdec, parallax, phot_g_mean_flux, phot_g_mean_mag`
 
 /*****************************************************************************************************************/
 
-func (g *GAIAServiceClient) Build() (string, error) {
+func (g *GAIAServiceClient) PerformRadialSearch(eq astrometry.ICRSEquatorialCoordinate, radius float64, limit int, threshold float64) ([]Source, error) {
 	// Define the ADQL query template for the GAIA TAP service:
 	// @see https://gea.esac.esa.int/archive/documentation/GDR2/Gaia_archive/chap_datamodel/
 	// N.B. (use only gold standard data, e.g., photometry processing mode (byte) i.e., phot_proc_mode = '0'):
-	const queryTemplate = `
+	const gaiaADQLTemplate = `
 		SELECT TOP {{.Limit}} {{.Record}}
 		FROM gaiadr2.gaia_source
 		WHERE CONTAINS(
@@ -103,44 +94,6 @@ func (g *GAIAServiceClient) Build() (string, error) {
 		ORDER BY phot_g_mean_mag ASC;
 	`
 
-	// Parse the ADQL query template:
-	tmpl, err := template.New("adql").Parse(queryTemplate)
-	if err != nil {
-		return "", err
-	}
-
-	// Set the template data from the query parameters:
-	// Data to populate the template
-	data := struct {
-		Record    string
-		RA        float64
-		Dec       float64
-		Radius    float64
-		Limit     float64
-		Threshold float64
-	}{
-		Record:    record,
-		RA:        g.Query.RA,
-		Dec:       g.Query.Dec,
-		Radius:    g.Query.Radius,
-		Limit:     g.Query.Limit,
-		Threshold: g.Query.Threshold,
-	}
-
-	// Execute the template with the data:
-	var buf bytes.Buffer
-	err = tmpl.Execute(&buf, data)
-	if err != nil {
-		return "", err
-	}
-
-	// Return the ADQL query string:
-	return buf.String(), nil
-}
-
-/*****************************************************************************************************************/
-
-func (g *GAIAServiceClient) PerformRadialSearch(eq astrometry.ICRSEquatorialCoordinate, radius float64, limit float64, threshold float64) ([]Source, error) {
 	// Set the query parameters:
 	g.Query.RA = eq.RA
 	g.Query.Dec = eq.Dec
@@ -149,81 +102,97 @@ func (g *GAIAServiceClient) PerformRadialSearch(eq astrometry.ICRSEquatorialCoor
 	g.Query.Threshold = threshold
 
 	// Construct the ADQL query from the template:
-	adqlQuery, err := g.Build()
+	adqlQuery, err := g.BuildADQLQuery(gaiaADQLTemplate, struct {
+		Record    string
+		RA        float64
+		Dec       float64
+		Radius    float64
+		Limit     int
+		Threshold float64
+	}{
+		Record:    gaiaRecord,
+		RA:        g.Query.RA,
+		Dec:       g.Query.Dec,
+		Radius:    g.Query.Radius,
+		Limit:     g.Query.Limit,
+		Threshold: g.Query.Threshold,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Prepare the POST form data for the HTTP request:
-	formData := url.Values{}
-	formData.Set("REQUEST", "doQuery")
-	formData.Set("LANG", "ADQL")
-	formData.Set("FORMAT", "json")
-	formData.Set("QUERY", adqlQuery)
-
-	// Create a new POST request with the form data:
-	req, err := http.NewRequest("POST", g.URI, strings.NewReader(formData.Encode()))
+	// Execute the query and get the response:
+	tapResponse, err := g.ExecuteADQLQuery(adqlQuery)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
-	}
-
-	// Set the headers to handle the form data:
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// Execute the request using the custom HTTP client:
-	resp, err := g.Client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Read the response body into a byte slice:
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	// Check for HTTP errors and return the response body if not OK:
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GAIA TAP query failed with status %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	// Parse the JSON response into a GAIAResponse struct:
-	var gaia GAIAResponse
-	err = json.Unmarshal(bodyBytes, &gaia)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
+		return nil, err
 	}
 
 	var stars []Source
 
-	for _, record := range gaia.Data {
+	// Helper functions defined locally within the method to convert an unknown interface{} to float64:
+	toFloat64 := func(val interface{}) (float64, bool) {
+		v, ok := val.(float64)
+		return v, ok
+	}
+
+	for _, record := range tapResponse.Data {
 		// Create a new Source struct from the record:
-		star := Source{
-			UID:         fmt.Sprintf("%v", record[0]),
-			Designation: fmt.Sprintf("%v", record[1]),
-			RA:          record[2].(float64),
-			Dec:         record[3].(float64),
+		// Initialize a new Source struct
+		var star Source
+
+		// Assign UID and Designation using fmt.Sprintf to handle various types
+		star.UID = fmt.Sprintf("%v", record[0])
+		star.Designation = fmt.Sprintf("%v", record[1])
+
+		// Safely assign RA and assig a default value if not a float64:
+		if ra, ok := toFloat64(record[2]); ok {
+			star.RA = ra
+		} else {
+			// Handle unexpected type or assign a default value:
+			star.RA = 0.0
 		}
 
+		// Safely assign Dec and assign a default value if not a float64:
+		if dec, ok := toFloat64(record[3]); ok {
+			star.Dec = dec
+		} else {
+			// Handle unexpected type or assign a default value:
+			star.Dec = 0.0
+		}
+
+		// Safely assign ProperMotionRA if not nil:
 		if record[4] != nil {
-			star.ProperMotionRA = record[4].(float64)
+			if pmra, ok := toFloat64(record[4]); ok {
+				star.ProperMotionRA = pmra
+			}
 		}
 
+		// Safely assign ProperMotionDec if not nil:
 		if record[5] != nil {
-			star.ProperMotionDec = record[5].(float64)
+			if pmdec, ok := toFloat64(record[4]); ok {
+				star.ProperMotionDec = pmdec
+			}
 		}
 
+		// Safely assign Parallax if not nil:
 		if record[6] != nil {
-			star.Parallax = record[6].(float64)
+			if parallax, ok := toFloat64(record[6]); ok {
+				star.Parallax = parallax
+			}
 		}
 
+		// Safely assign PhotometricGMeanFlux if not nil:
 		if record[7] != nil {
-			star.PhotometricGMeanFlux = record[7].(float64)
+			if flux, ok := toFloat64(record[7]); ok {
+				star.PhotometricGMeanFlux = flux
+			}
 		}
 
+		// Safely assign PhotometricGMeanMagnitude if not nil:
 		if record[8] != nil {
-			star.PhotometricGMeanMagnitude = record[8].(float64)
+			if magnitude, ok := toFloat64(record[8]); ok {
+				star.PhotometricGMeanMagnitude = magnitude
+			}
 		}
 
 		// Append to the stars slice of Source structs:
