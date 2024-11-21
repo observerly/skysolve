@@ -137,3 +137,39 @@ func NewSimulatedSky(xs int, ys int, eq astrometry.ICRSEquatorialCoordinate, par
 }
 
 /*****************************************************************************************************************/
+
+//lint:ignore U1000 Reserved for future implementation.
+func (s *SimulatedSkyImage) normaliseFieldImage(data []float64, width, height int) ([][]uint32, error) {
+	// Initialize the 2D slice with the desired height.
+	image := make([][]uint32, height)
+
+	// Create a flat slice to hold all processed pixel values.
+	flatImage := make([]uint32, height*width)
+
+	// Single loop to process all pixels.
+	for index := 0; index < height*width; index++ {
+		// Assign the inner slice when starting a new row.
+		if index%width == 0 {
+			y := index / width
+			image[y] = flatImage[index : index+width]
+		}
+
+		// Apply gain and bias offset.
+		value := data[index]/s.Gain + s.BiasOffset
+
+		// Clamp the value to the valid ADU range.
+		if value < 0.0 {
+			value = 0.0
+		}
+		if value > s.MaxADU {
+			value = s.MaxADU
+		}
+
+		// Store the rounded value as uint32 in the flat slice.
+		flatImage[index] = uint32(math.Round(value))
+	}
+
+	return image, nil
+}
+
+/*****************************************************************************************************************/
