@@ -38,14 +38,6 @@ type GAIAServiceClient struct {
 
 /*****************************************************************************************************************/
 
-// GAIAResponse represents the JSON structure returned by GAIA TAP service.
-type GAIAResponse struct {
-	// Assuming GAIA TAP returns a "data" field containing an array of records.
-	Data [][]interface{} `json:"data"`
-}
-
-/*****************************************************************************************************************/
-
 // Gaia DR3 service handler. The five-parameter astrometric solution, positions on the sky (α, δ),
 // parallaxes, and proper motions, are given for around 1.46 billion sources, with a limiting magnitude
 // of G = 21.
