@@ -92,6 +92,12 @@ func main() {
 		fmt.Println("dec header not found")
 		return
 	}
+	
+	// Create a new GAIA service client:
+	service := catalog.NewCatalogService(catalog.GAIA, catalog.Params{
+		Limit:     50,
+		Threshold: 8,
+	})
 
 	eq := astrometry.ICRSEquatorialCoordinate{
 		RA:  float64(ra.Value),
@@ -102,7 +108,7 @@ func main() {
 	radius := 2.0
 
 	// Perform a radial search with the given center and radius, for all sources with a magnitude less than 10:
-	sources, err := solver.GetCatalogSources(solver.GAIA, eq, radius)
+	sources, err := service.PerformRadialSearch(eq, radius)
 	if err != nil {
 		fmt.Printf("there was an error while performing the radial search: %v", err)
 		return
