@@ -16,6 +16,17 @@ import (
 
 /*****************************************************************************************************************/
 
+type Catalog int
+
+/*****************************************************************************************************************/
+
+const (
+	GAIA Catalog = iota
+	SIMBAD
+)
+
+/*****************************************************************************************************************/
+
 type Source struct {
 	UID                       string  `json:"uid" gaia:"source_id" simbad:"uid"`                   // Source ID (unique)
 	Designation               string  `json:"designation" gaia:"designation" simbad:"designation"` // Source Designation
