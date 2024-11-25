@@ -132,7 +132,7 @@ func (g *GAIAServiceClient) PerformRadialSearch(eq astrometry.ICRSEquatorialCoor
 		// Initialize a new Source struct
 		var star Source
 
-		// Assign UID and Designation using fmt.Sprintf to handle various types
+		// Assign UID and Designation using fmt.Sprintf to handle various types:
 		star.UID = fmt.Sprintf("%v", record[0])
 		star.Designation = fmt.Sprintf("%v", record[1])
 
