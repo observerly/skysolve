@@ -49,3 +49,34 @@ type SourceAsterism struct {
 }
 
 /*****************************************************************************************************************/
+
+type CatalogService struct {
+	Catalog   Catalog
+	Limit     int
+	Threshold float64
+}
+
+/*****************************************************************************************************************/
+
+type Params struct {
+	RA        float64
+	Dec       float64
+	Radius    float64
+	Limit     int
+	Threshold float64
+}
+
+/*****************************************************************************************************************/
+
+func NewCatalogService(
+	catalog Catalog,
+	params Params,
+) *CatalogService {
+	return &CatalogService{
+		Catalog:   catalog,
+		Limit:     params.Limit,
+		Threshold: params.Threshold,
+	}
+}
+
+/*****************************************************************************************************************/
