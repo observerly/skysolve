@@ -57,20 +57,6 @@ type PlateSolver struct {
 
 /*****************************************************************************************************************/
 
-func GetCatalogSources(psc PlateSolverCatalog, eq astrometry.ICRSEquatorialCoordinate, radius float64) ([]catalog.Source, error) {
-	switch psc {
-	case GAIA:
-		// Create a new GAIA service client:
-		q := catalog.NewGAIAServiceClient()
-		// Perform a radial search with the given center and radius, for all sources with a magnitude less than 10:
-		return q.PerformRadialSearch(eq, radius, 100, 8)
-	default:
-		return nil, errors.New("unsupported catalog")
-	}
-}
-
-/*****************************************************************************************************************/
-
 type Params struct {
 	RA                  float64
 	Dec                 float64
