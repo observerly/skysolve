@@ -15,6 +15,7 @@ import (
 
 	"github.com/observerly/iris/pkg/fits"
 	"github.com/observerly/skysolve/pkg/astrometry"
+	"github.com/observerly/skysolve/pkg/catalog"
 	"github.com/observerly/skysolve/pkg/geometry"
 	"github.com/observerly/skysolve/pkg/solver"
 )
@@ -58,15 +59,22 @@ func main() {
 		return
 	}
 
+	// Create a new GAIA service client:
+	service := catalog.NewCatalogService(catalog.GAIA, catalog.Params{
+		Limit:     50,
+		Threshold: 8,
+	})
+
 	eq := astrometry.ICRSEquatorialCoordinate{
 		RA:  float64(ra.Value),
 		Dec: float64(dec.Value),
 	}
 
+	// 2 degree radial search field:
 	radius := 2.0
 
 	// Perform a radial search with the given center and radius, for all sources with a magnitude less than 10:
-	sources, err := solver.GetCatalogSources(solver.GAIA, eq, radius)
+	sources, err := service.PerformRadialSearch(eq, radius)
 
 	if err != nil {
 		fmt.Printf("there was an error while performing the radial search: %v", err)
