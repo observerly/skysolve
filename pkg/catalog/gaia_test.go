@@ -9,7 +9,6 @@
 package catalog
 
 import (
-	"fmt"
 	"math"
 	"testing"
 
@@ -42,8 +41,6 @@ func TestGAIAQueryExecutedSuccessfully(t *testing.T) {
 		Dec: 0,
 	}, 2.5, 100, 10)
 
-	fmt.Println(err)
-
 	if err != nil {
 		t.Errorf("Failed to execute query: %v", err)
 	}
@@ -59,8 +56,8 @@ func TestGAIAQueryExecutedSuccessfully(t *testing.T) {
 		}
 	}
 
-	// The GAIA catalog is expected to return a maximum of 116 stars for this query:
-	if len(stars) > 116 {
+	// The GAIA catalog is expected to return a maximum of 100 stars for this query:
+	if len(stars) > 100 {
 		t.Errorf("Too many stars returned")
 	}
 }
