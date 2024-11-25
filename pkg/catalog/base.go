@@ -11,6 +11,9 @@ package catalog
 /*****************************************************************************************************************/
 
 import (
+	"errors"
+
+	"github.com/observerly/skysolve/pkg/astrometry"
 	"github.com/observerly/skysolve/pkg/geometry"
 )
 
@@ -76,6 +79,28 @@ func NewCatalogService(
 		Catalog:   catalog,
 		Limit:     params.Limit,
 		Threshold: params.Threshold,
+	}
+}
+
+/*****************************************************************************************************************/
+
+func (c *CatalogService) PerformRadialSearch(
+	eq astrometry.ICRSEquatorialCoordinate,
+	radius float64,
+) ([]Source, error) {
+	switch c.Catalog {
+	case GAIA:
+		// Create a new GAIA service client:
+		q := NewGAIAServiceClient()
+		// Perform a radial search with the given center and radius, for all sources with a magnitude less than 10:
+		return q.PerformRadialSearch(eq, radius, c.Limit, c.Threshold)
+	case SIMBAD:
+		// Create a new SIMBAD service client:
+		q := NewSIMBADServiceClient()
+		// Perform a radial search with the given center and radius, for all sources with a magnitude less than 10:
+		return q.PerformRadialSearch(eq, radius, c.Limit, c.Threshold)
+	default:
+		return nil, errors.New("unsupported catalog")
 	}
 }
 
