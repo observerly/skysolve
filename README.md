@@ -182,3 +182,9 @@ As always, human knowledge is built on the shoulders of giants. This project wou
 - [Twirl](https://github.com/lgrcia/twirl) - Modern, astrometric plate solving package for Python.
 - [The GAIA DR3 Catalog](https://www.cosmos.esa.int/web/gaia/dr3) - The most accurate and precise sky source catalog in existence.
 - [The Sloan Digital Sky Survey](https://www.sdss.org/) - The most comprehensive digital sky survey in existence.
+
+### Standing On The Shoulders Of Giants
+
+To the Harvard Computers, Annie Jump Cannon, Antonia Maury, Henrietta Leavitt, Evelyn Leland, Anna Winlock, Muriel Mussells Seyfert, Cecilia Payne-Gaposchkin, Williamina Fleming and Florence Cushman.
+
+
