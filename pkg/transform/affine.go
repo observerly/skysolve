@@ -10,13 +10,10 @@ package transform
 
 /*****************************************************************************************************************/
 
+// Affine2DParameters represents the parameters of a 2D affine transformation.
 type Affine2DParameters struct {
-	A float64
-	B float64
-	C float64
-	D float64
-	E float64
-	F float64
+	A, B, C float64 // Transformation for X: x' = A*x + B*y + C
+	D, E, F float64 // Transformation for Y: y' = D*x + E*y + F
 }
 
 /*****************************************************************************************************************/
