@@ -23,6 +23,12 @@ var RAD2DEG = 180 / math.Pi
 var DEG2RAD = math.Pi / 180
 
 /*****************************************************************************************************************/
+
+func Radians(degrees float64) float64 {
+	return degrees * DEG2RAD
+}
+
+/*****************************************************************************************************************/
 func ConvertEquatorialToGnomic(ra, dec, ra0, dec0 float64) (x, y float64) {
 	// Threshold to determine if cosalt1 is effectively zero:
 	const epsilon = 1e-10
