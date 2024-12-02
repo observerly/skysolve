@@ -29,6 +29,13 @@ func Radians(degrees float64) float64 {
 }
 
 /*****************************************************************************************************************/
+
+func Degrees(radians float64) float64 {
+	return radians * RAD2DEG
+}
+
+/*****************************************************************************************************************/
+
 func ConvertEquatorialToGnomic(ra, dec, ra0, dec0 float64) (x, y float64) {
 	// Threshold to determine if cosalt1 is effectively zero:
 	const epsilon = 1e-10
