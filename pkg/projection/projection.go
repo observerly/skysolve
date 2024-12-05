@@ -41,10 +41,10 @@ func ConvertEquatorialToGnomic(ra, dec, ra0, dec0 float64) (x, y float64) {
 	const epsilon = 1e-10
 
 	// Convert all coordinates from degrees to radians:
-	ra = ra * math.Pi / 180
-	dec = dec * math.Pi / 180
-	ra0 = ra0 * math.Pi / 180
-	dec0 = dec0 * math.Pi / 180
+	ra = Radians(ra)
+	dec = Radians(dec)
+	ra0 = Radians(ra0)
+	dec0 = Radians(dec0)
 
 	// Gnomonic projection formula:
 	cosalt1 := math.Sin(dec0)*math.Sin(dec) + math.Cos(dec0)*math.Cos(dec)*math.Cos(ra-ra0)
