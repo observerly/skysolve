@@ -12,6 +12,8 @@ package projection
 
 import (
 	"math"
+
+	"github.com/observerly/skysolve/pkg/astrometry"
 )
 
 /*****************************************************************************************************************/
@@ -61,6 +63,16 @@ func ConvertEquatorialToGnomic(ra, dec, ra0, dec0 float64) (x, y float64) {
 	y = (math.Cos(dec0)*math.Sin(dec) - math.Sin(dec0)*math.Cos(dec)*math.Cos(ra-ra0)) / cosalt1
 
 	return x, y
+}
+
+/*****************************************************************************************************************/
+
+func ConvertEquatorialToLambertCylindricalCartesian(eq astrometry.ICRSEquatorialCoordinate, z float64) (x, y float64) {
+	// Calculate the y coordinate:
+	y = 3 * (math.Pi / 8) * z
+
+	// Return the x and y coordinates in degrees:
+	return eq.RA, Degrees(y)
 }
 
 /*****************************************************************************************************************/
