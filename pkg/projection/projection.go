@@ -76,3 +76,18 @@ func ConvertEquatorialToLambertCylindricalCartesian(eq astrometry.ICRSEquatorial
 }
 
 /*****************************************************************************************************************/
+
+func ConvertEquatorialToInterruptedCollignonCartesian(eq astrometry.ICRSEquatorialCoordinate, z float64) (x, y float64) {
+	sigma := math.Sqrt(3 * (1 - math.Abs(z)))
+
+	// Calculate the y coordinate:
+	y = (math.Pi / 4) * (2 - sigma)
+
+	facetX := (math.Pi / 4) * (2 * math.Floor(2+(2*Radians(eq.RA)/math.Pi)-3))
+	// Calculate the x coordinate:
+	x = facetX + sigma*(Radians(eq.Dec)-facetX)
+	// Return the x and y coordinates in degrees:
+	return Degrees(x), Degrees(math.Copysign(y, eq.Dec))
+}
+
+/*****************************************************************************************************************/
