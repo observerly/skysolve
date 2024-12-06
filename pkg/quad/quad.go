@@ -31,3 +31,14 @@ type Quad struct {
 }
 
 /*****************************************************************************************************************/
+
+// Match represents a correspondence between an extracted star (from our image) and a
+// catalog source star in pixel coordinates. This could be a false positive match, but
+// we aim to minimize these by applying statistical methods for ruling out near or false
+// matches.
+type QuadMatch struct {
+	StarQaud   Quad
+	SourceQuad Quad
+}
+
+/*****************************************************************************************************************/
