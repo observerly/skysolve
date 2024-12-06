@@ -132,11 +132,27 @@ func NormalizeToAB(a, b, c, d star.Star) (star.Star, star.Star, star.Star, star.
 	d.X = rDx / scale
 	d.Y = rDy / scale
 
+	// If Cx + Dx > 1, then the quad is not symmetric (and thus not invariant under rotation):
 	if c.X+d.X > 1 {
-		return a, b, c, d, fmt.Errorf("quad invalid: Cx + Dx > 1, which breaks normalisation symmetry")
+		return a, b, c, d, fmt.Errorf("quad invalid: Cx + Dx > 1, which makes the normalisation asymmetric")
+	}
+
+	// If either C or D are not within the unit circle, then the quad is invalid:
+	if !IsWithinUnitCircle(c.X, c.Y) && !IsWithinUnitCircle(d.X, d.Y) {
+		return a, b, c, d, fmt.Errorf("quad invalid: C or D is not within the unit circle")
 	}
 
 	return a, b, c, d, nil
+}
+
+/*****************************************************************************************************************/
+
+// IsWithinUnitCircle checks if a star is within the unit circle centered at (0.5, 0.5):
+func IsWithinUnitCircle(x float64, y float64) bool {
+	centerX, centerY := 0.5, 0.5
+	radius := math.Sqrt2 / 2
+	dist := math.Hypot(x-centerX, y-centerY)
+	return dist <= radius+1e-6 // Adding a small epsilon to account for floating-point precision
 }
 
 /*****************************************************************************************************************/
