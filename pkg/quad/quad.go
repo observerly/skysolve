@@ -11,9 +11,16 @@ package quad
 /*****************************************************************************************************************/
 
 import (
+	"fmt"
+	"math"
+
 	"github.com/observerly/skysolve/pkg/geometry"
 	"github.com/observerly/skysolve/pkg/star"
 )
+
+/*****************************************************************************************************************/
+
+var NORMALISATION_ANGLE = math.Pi / 4
 
 /*****************************************************************************************************************/
 
@@ -83,6 +90,53 @@ func DetermineABCD(a, b, c, d star.Star) (star.Star, star.Star, star.Star, star.
 	}
 
 	return A, B, remaining[1], remaining[0]
+}
+
+/*****************************************************************************************************************/
+
+// NormalizeToAB normalizes the Quad such that point A maps to (0,0) and point B maps to (1,1).
+func NormalizeToAB(a, b, c, d star.Star) (star.Star, star.Star, star.Star, star.Star, error) {
+	Ax, Ay := 0.0, 0.0
+	Bx, By := b.X-a.X, b.Y-a.Y
+	Cx, Cy := c.X-a.X, c.Y-a.Y
+	Dx, Dy := d.X-a.X, d.Y-a.Y
+
+	// Step 2: Calculate the rotation angle to align A->B with y=x
+	rotationAngle := NORMALISATION_ANGLE - math.Atan2(By, Bx)
+
+	cosA := math.Cos(rotationAngle)
+	sinA := math.Sin(rotationAngle)
+
+	rAx, rAy := Ax*cosA-Ay*sinA, Ax*sinA+Ay*cosA
+	rBx, rBy := Bx*cosA-By*sinA, Bx*sinA+By*cosA
+	rCx, rCy := Cx*cosA-Cy*sinA, Cx*sinA+Cy*cosA
+	rDx, rDy := Dx*cosA-Dy*sinA, Dx*sinA+Dy*cosA
+
+	// Step 4: Calculate scale based on rotated B.x (which equals rotated B.y)
+	scale := rBx // Since after rotation, rBx == rBy
+
+	// Prevent division by zero
+	if scale == 0 {
+		scale = 1
+	}
+
+	a.X = rAx / scale
+	a.Y = rAy / scale
+
+	b.X = rBx / scale
+	b.Y = rBy / scale
+
+	c.X = rCx / scale
+	c.Y = rCy / scale
+
+	d.X = rDx / scale
+	d.Y = rDy / scale
+
+	if c.X+d.X > 1 {
+		return a, b, c, d, fmt.Errorf("quad invalid: Cx + Dx > 1, which breaks normalisation symmetry")
+	}
+
+	return a, b, c, d, nil
 }
 
 /*****************************************************************************************************************/
