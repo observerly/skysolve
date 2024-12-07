@@ -51,6 +51,40 @@ type QuadMatch struct {
 
 /*****************************************************************************************************************/
 
+// NewQuad creates a new Quad from four points.
+func NewQuad(a, b, c, d star.Star, precision int) (Quad, error) {
+	// We need to determine which is A and which is B, given our criteria, and then determine
+	// which is C and which is D based on the x dimension.
+	A, B, C, D := DetermineABCD(a, b, c, d)
+
+	// Once we have determined A, B, C and D, we can normalised according to coordinate space such that
+	// A is found at (0,0) and B is then found at (1,1).
+	a, b, c, d, err := NormalizeToAB(A, B, C, D)
+
+	if err != nil {
+		return Quad{}, err
+	}
+
+	// Set up the quad to contain the original points and set the normalised points:
+	q := Quad{
+		A:           A,
+		B:           B,
+		C:           C,
+		D:           D,
+		NormalisedA: a,
+		NormalisedB: b,
+		NormalisedC: c,
+		NormalisedD: d,
+		Precision:   precision,
+	}
+
+	// Generate the hash code for the quad, once we have the normalised points:
+	q.Hash = [4]float64{q.NormalisedC.X, q.NormalisedC.Y, q.NormalisedD.X, q.NormalisedD.Y}
+
+	return q, nil
+}
+
+/*****************************************************************************************************************/
 // DetermineAB determines which points are A and B based on the criteria that A and B are the two points
 // with the largest distance between all of the points in the quad.
 // C is then the point that is closest to A in the x dimension, e.g., Cx < Dx.
