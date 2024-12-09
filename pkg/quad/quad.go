@@ -16,6 +16,7 @@ import (
 
 	"github.com/observerly/skysolve/pkg/geometry"
 	"github.com/observerly/skysolve/pkg/star"
+	"gonum.org/v1/gonum/spatial/vptree"
 )
 
 /*****************************************************************************************************************/
@@ -82,6 +83,27 @@ func NewQuad(a, b, c, d star.Star, precision int) (Quad, error) {
 	q.Hash = [4]float64{q.NormalisedC.X, q.NormalisedC.Y, q.NormalisedD.X, q.NormalisedD.Y}
 
 	return q, nil
+}
+
+/*****************************************************************************************************************/
+
+// Distance calculates the Euclidean distance between two quads based on their Hash fields.
+// This method satisfies the vptree.Comparable interface.
+func (q Quad) Distance(compare vptree.Comparable) float64 {
+	o, ok := compare.(Quad)
+
+	if !ok {
+		panic("vptree: incompatible type for distance calculation")
+	}
+
+	// Calculate squared differences for C and D:
+	dxC := q.NormalisedC.X - o.NormalisedC.X
+	dyC := q.NormalisedC.Y - o.NormalisedC.Y
+	dxD := q.NormalisedD.X - o.NormalisedD.X
+	dyD := q.NormalisedD.Y - o.NormalisedD.Y
+
+	// Compute Euclidean distance in 4D space
+	return (math.Hypot(dxC, dyC) + math.Hypot(dxD, dyD)) / 2
 }
 
 /*****************************************************************************************************************/
