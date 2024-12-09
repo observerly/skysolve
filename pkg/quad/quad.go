@@ -107,6 +107,16 @@ func (q Quad) Distance(compare vptree.Comparable) float64 {
 }
 
 /*****************************************************************************************************************/
+
+func (q *Quad) EucliadianPixelCenter() (float64, float64) {
+	// Get the center between the four points, A, B, C and D:
+	x := (q.A.X + q.B.X + q.C.X + q.D.X) / 4
+	// Get the center between the four points, A, B, C and D:
+	y := (q.A.Y + q.B.Y + q.C.Y + q.D.Y) / 4
+	return x, y
+}
+
+/*****************************************************************************************************************/
 // DetermineAB determines which points are A and B based on the criteria that A and B are the two points
 // with the largest distance between all of the points in the quad.
 // C is then the point that is closest to A in the x dimension, e.g., Cx < Dx.
