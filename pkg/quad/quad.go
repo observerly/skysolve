@@ -125,6 +125,21 @@ func (q *Quad) GenerateHashCode() [4]float64 {
 }
 
 /*****************************************************************************************************************/
+
+func (q Quad) GetHashCodeAsString() string {
+	format := fmt.Sprintf("%%.%df%%.%df%%.%df%%.%df", q.Precision, q.Precision, q.Precision, q.Precision)
+
+	return fmt.Sprintf(
+		format,
+		q.Hash[0],
+		q.Hash[1],
+		q.Hash[2],
+		q.Hash[3],
+	)
+}
+
+/*****************************************************************************************************************/
+
 // DetermineAB determines which points are A and B based on the criteria that A and B are the two points
 // with the largest distance between all of the points in the quad.
 // C is then the point that is closest to A in the x dimension, e.g., Cx < Dx.
