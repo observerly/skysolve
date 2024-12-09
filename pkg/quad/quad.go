@@ -117,6 +117,14 @@ func (q *Quad) EucliadianPixelCenter() (float64, float64) {
 }
 
 /*****************************************************************************************************************/
+
+// GenerateHashCode generates a precise hash code for the quad based on projections.
+// It mirrors the functionality of the Python `quad_hash` function.
+func (q *Quad) GenerateHashCode() [4]float64 {
+	return [4]float64{q.NormalisedC.X, q.NormalisedC.Y, q.NormalisedD.X, q.NormalisedD.Y}
+}
+
+/*****************************************************************************************************************/
 // DetermineAB determines which points are A and B based on the criteria that A and B are the two points
 // with the largest distance between all of the points in the quad.
 // C is then the point that is closest to A in the x dimension, e.g., Cx < Dx.
