@@ -30,3 +30,25 @@ type QuadMatcher struct {
 }
 
 /*****************************************************************************************************************/
+
+// NewMatcher initializes the Matcher with a list of source quads and maxUses.
+func NewQuadMatcher(quads []quad.Quad) (*QuadMatcher, error) {
+	// Convert []quad.Quad to []vptree.Comparable
+	comparables := make([]vptree.Comparable, len(quads))
+
+	for i, q := range quads {
+		comparables[i] = q
+	}
+
+	// Initialize the VP-Tree with effort=2 (can be adjusted)
+	tree, err := vptree.New(comparables, 1, nil) // effort=2, src=nil for default randomness
+	if err != nil {
+		return nil, err
+	}
+
+	return &QuadMatcher{
+		Tree: tree,
+	}, nil
+}
+
+/*****************************************************************************************************************/
