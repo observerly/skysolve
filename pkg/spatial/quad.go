@@ -11,6 +11,8 @@ package spatial
 /*****************************************************************************************************************/
 
 import (
+	"errors"
+
 	"github.com/observerly/skysolve/pkg/quad"
 	"gonum.org/v1/gonum/spatial/vptree"
 )
@@ -48,6 +50,52 @@ func NewQuadMatcher(quads []quad.Quad) (*QuadMatcher, error) {
 
 	return &QuadMatcher{
 		Tree: tree,
+	}, nil
+}
+
+/*****************************************************************************************************************/
+
+// MatchQuad finds the nearest source Quad to the generated Quad within maxDistance.
+// It ensures that no star in the matched Quad exceeds MaxUses.
+func (m *QuadMatcher) MatchQuad(q quad.Quad, tolerance float64) (*QuadMatch, error) {
+	// Query the VP-Tree for the nearest neighbor
+	nearest, distance := m.Tree.Nearest(q)
+
+	if distance > tolerance {
+		return nil, errors.New("no match found within the specified distance")
+	}
+
+	matchedQuad, ok := nearest.(quad.Quad)
+
+	if !ok {
+		return nil, errors.New("matched element is not of type Quad")
+	}
+
+	// Create a copy of the matchedQuad to avoid modifying the original source Quad
+	qc := matchedQuad
+
+	// Set the corresponding equatorial coordinates for the matched Quad:
+	qc.A.RA = q.A.RA
+	qc.A.Dec = q.A.Dec
+
+	qc.B.RA = q.B.RA
+	qc.B.Dec = q.B.Dec
+
+	qc.C.RA = q.C.RA
+	qc.C.Dec = q.C.Dec
+
+	qc.D.RA = q.D.RA
+	qc.D.Dec = q.D.Dec
+
+	// Ensure we set the designations of the matched Quad:
+	qc.A.Designation = q.A.Designation
+	qc.B.Designation = q.B.Designation
+	qc.C.Designation = q.C.Designation
+	qc.D.Designation = q.D.Designation
+
+	return &QuadMatch{
+		Quad:     qc,
+		Distance: distance,
 	}, nil
 }
 
