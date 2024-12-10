@@ -100,3 +100,23 @@ func (m *QuadMatcher) MatchQuad(q quad.Quad, tolerance float64) (*QuadMatch, err
 }
 
 /*****************************************************************************************************************/
+
+// MatchQuads finds matches for all generated quads.
+// Returns a slice of Match containing successful matches.
+func (m *QuadMatcher) MatchQuads(quads []quad.Quad, tolerance float64) ([]QuadMatch, error) {
+	matches := []QuadMatch{}
+
+	for _, q := range quads {
+		match, err := m.MatchQuad(q, tolerance)
+		if err != nil {
+			// Handle quads with no matches or exceeded usage as needed, e.g., skip or log
+			continue
+		}
+
+		matches = append(matches, *match)
+	}
+
+	return matches, nil
+}
+
+/*****************************************************************************************************************/
