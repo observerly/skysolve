@@ -148,6 +148,8 @@ func NewPlateSolver(
 		RA:         ra,
 		Dec:        dec,
 		PixelScale: params.PixelScale,
+		Width:      int32(xs),
+		Height:     int32(ys),
 	}, nil
 }
 
@@ -469,9 +471,9 @@ func (ps *PlateSolver) solveForAffineParameters(
 	affineParams := transform.Affine2DParameters{
 		A: params[0],
 		B: params[1],
-		C: params[3],
-		D: params[4],
-		E: params[2],
+		C: params[2],
+		D: params[3],
+		E: params[4],
 		F: params[5],
 	}
 
@@ -872,21 +874,21 @@ func (ps *PlateSolver) Solve(tolerance geometry.InvariantFeatureTolerance, sipOr
 	}
 
 	// Calculate the x-coordinate of the center of the image:
-	x := float64(ps.Width) / 2
+	xr := float64(ps.Width / 2.0)
 
 	// Calculate the y-coordinate of the center of the image:
-	y := float64(ps.Height) / 2
+	yr := float64(ps.Height / 2.0)
 
 	// Now that we have the affine parameters, we can calculate the actual RA and dec coordinate
 	// for the center of the image:
 	t := wcs.NewWorldCoordinateSystem(
-		x,
-		y,
+		0,
+		0,
 		wcs.WCSParams{
-			Projection:       wcs.RADEC_TANSIP,
-			AffineParams:     *affineParams,
-			SIPForwardParams: *fsipParams,
-			SIPInverseParams: *isipParams,
+			Projection:   wcs.RADEC_TANSIP,
+			AffineParams: *affineParams,
+			ReferenceX:   xr,
+			ReferenceY:   yr,
 		},
 	)
 
