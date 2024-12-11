@@ -62,6 +62,8 @@ func (c CoordinateProjectionType) ToCTypes() CTypeP {
 type WCSParams struct {
 	Projection       CoordinateProjectionType         // Projection type e.g., "TAN", or "TAN-SIP"
 	AffineParams     transform.Affine2DParameters     // Affine transformation parameters
+	ReferenceX       float64                          // Reference X coordinate
+	ReferenceY       float64                          // Reference Y coordinate
 	SIPForwardParams transform.SIP2DForwardParameters // SIP forward transformation (distortion) coefficients, x, y to RA, Dec
 	SIPInverseParams transform.SIP2DInverseParameters // SIP inverse transformation (distortion) coefficients RA, Dec to x, y
 }
