@@ -94,40 +94,56 @@ type WCS struct {
 
 /*****************************************************************************************************************/
 
+// NewWorldCoordinateSystem creates a new WCS object with correctly mapped affine parameters.
 func NewWorldCoordinateSystem(xc float64, yc float64, params WCSParams) WCS {
 	// Get the coordinate projection types, e.g., "RA---TAN", or "RA---TAN-SIP":
 	ctypes := params.Projection.ToCTypes()
 
-	// Create a new WCS object:
+	// Set CD matrix elements
+	CD1_1 := params.AffineParams.A
+	CD1_2 := params.AffineParams.B
+	CD2_1 := params.AffineParams.D
+	CD2_2 := params.AffineParams.E
+
+	// Calculate CRVAL1 and CRVAL2 based on the affine transformation at the reference pixel (xc, yc) being at (0,0):
+	crval1 := params.AffineParams.C
+	crval2 := params.AffineParams.F
+
+	// Create a new WCS object with correctly mapped CD matrix and CRVALs
 	wcs := WCS{
 		WCAXES: 2, // We always assume two world coordinate axes, RA and Dec.
-		CRPIX1: float64(xc),
-		CRPIX2: float64(yc),
-		CRVAL1: 0,
-		CRVAL2: 0,
-		CUNIT1: "deg", // We always assume degrees.
-		CUNIT2: "deg", // We always assume degrees.
+		CRPIX1: xc,
+		CRPIX2: yc,
+		CRVAL1: crval1,
+		CRVAL2: crval2,
+		CUNIT1: "deg", // Degrees
+		CUNIT2: "deg", // Degrees
 		CTYPE1: ctypes.CType1,
 		CTYPE2: ctypes.CType2,
-		CD1_1:  params.AffineParams.A,
-		CD1_2:  params.AffineParams.B,
-		CD2_1:  params.AffineParams.C,
-		CD2_2:  params.AffineParams.D,
-		E:      params.AffineParams.E,
-		F:      params.AffineParams.F,
+		CD1_1:  CD1_1,
+		CD1_2:  CD1_2,
+		CD2_1:  CD2_1,
+		CD2_2:  CD2_2,
 		FSIP:   params.SIPForwardParams,
 		ISIP:   params.SIPInverseParams,
 	}
 
-	// Set the reference equatorial coordinate:
-	wcs.CRVAL1 = params.AffineParams.E
-	wcs.CRVAL2 = params.AffineParams.F
+	// Calculate the coordinate increment for axis 1 (CDELT1)
+	wcs.CDELT1 = -math.Sqrt(wcs.CD1_1*wcs.CD1_1 + wcs.CD2_1*wcs.CD2_1)
 
-	// Calculate the coordinate increment for axis 1:
-	wcs.CDELT1 = math.Sqrt(wcs.CD1_1*wcs.CD1_1 + wcs.CD2_1*wcs.CD2_1)
-
-	// Calculate the coordinate increment for axis 2:
+	// Calculate the coordinate increment for axis 2 (CDELT2)
 	wcs.CDELT2 = math.Sqrt(wcs.CD1_2*wcs.CD1_2 + wcs.CD2_2*wcs.CD2_2)
+
+	// If a reference pixel is provided, then re-calibrate the WCS object to the reference pixel
+	if params.ReferenceX != 0 && params.ReferenceY != 0 {
+		eq := wcs.PixelToEquatorialCoordinate(params.ReferenceX, params.ReferenceY)
+
+		wcs.CRVAL1 = eq.RA
+		wcs.CRVAL2 = eq.Dec
+
+		wcs.CRPIX1 = params.ReferenceX
+		wcs.CRPIX2 = params.ReferenceY
+	}
 
 	return wcs
 }
@@ -220,30 +236,30 @@ func (wcs *WCS) PixelToEquatorialCoordinate(
 func (wcs *WCS) EquatorialCoordinateToPixel(
 	ra, dec float64,
 ) (x, y float64) {
-	// Compute the offsets from the reference value:
-	deltaRA := ra - wcs.CRVAL1   // Offset in RA
-	deltaDec := dec - wcs.CRVAL2 // Offset in Dec
-
 	// Find the determinant of the CD matrix, for the inverse CD matrix:
 	det := wcs.CD1_1*wcs.CD2_2 - wcs.CD1_2*wcs.CD2_1
 
 	// If the determinant is zero, then it is considered singular and the inverse matrix is defaulted:
 	invCD1_1 := 0.0
 	invCD1_2 := 0.0
+	invC := 0.0
 	invCD2_1 := 0.0
 	invCD2_2 := 0.0
+	invF := 0.0
 
 	// If it is non-zero, then compute the inverse CD matrix:
 	if det != 0 {
 		invCD1_1 = wcs.CD2_2 / det
 		invCD1_2 = -wcs.CD1_2 / det
+		invC = (wcs.CD1_2*wcs.CRVAL2 - wcs.CRVAL1*wcs.CD2_2) / det
 		invCD2_1 = -wcs.CD2_1 / det
 		invCD2_2 = wcs.CD1_1 / det
+		invF = (wcs.CRVAL1*wcs.CD2_1 - wcs.CD1_1*wcs.CRVAL2) / det
 	}
 
-	// Step 3: Apply the inverse CD matrix to get initial deltaX and deltaY
-	deltaX := invCD1_1*deltaRA + invCD1_2*deltaDec
-	deltaY := invCD2_1*deltaRA + invCD2_2*deltaDec
+	// Apply the inverse CD matrix to get initial deltaX and deltaY
+	deltaX := invCD1_1*ra + invCD1_2*dec + invC
+	deltaY := invCD2_1*ra + invCD2_2*dec + invF
 
 	// Compute non-linear SIP distortion corrections A and B:
 	A := 0.0
@@ -272,8 +288,8 @@ func (wcs *WCS) EquatorialCoordinateToPixel(
 	deltaY += B
 
 	// Add the reference pixel coordinates to obtain final pixel positions
-	x = wcs.CRPIX1 + deltaX
-	y = wcs.CRPIX2 + deltaY
+	x = deltaX
+	y = deltaY
 
 	return x, y
 }

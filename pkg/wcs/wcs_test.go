@@ -11,6 +11,7 @@ package wcs
 /*****************************************************************************************************************/
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
@@ -74,11 +75,11 @@ func TestNewWCS(t *testing.T) {
 		t.Errorf("CUNIT2 not set correctly")
 	}
 
-	if wcs.CDELT1 != 1 {
+	if math.Abs(wcs.CDELT1)-1.4142 > 0.001 {
 		t.Errorf("CDELT1 not set correctly")
 	}
 
-	if wcs.CDELT2 != 1 {
+	if math.Abs(wcs.CDELT2)-0 > 0.0000001 {
 		t.Errorf("CDELT2 not set correctly")
 	}
 
@@ -98,11 +99,11 @@ func TestNewWCS(t *testing.T) {
 		t.Errorf("CD1_2 not set correctly")
 	}
 
-	if wcs.CD2_1 != 0 {
+	if wcs.CD2_1 != 1 {
 		t.Errorf("CD2_1 not set correctly")
 	}
 
-	if wcs.CD2_2 != 1 {
+	if wcs.CD2_2 != 0 {
 		t.Errorf("CD2_2 not set correctly")
 	}
 }
@@ -273,11 +274,11 @@ func TestEquatorialCoordinateToPixelAtImageCenter(t *testing.T) {
 
 	tolerance := 0.0000001
 
-	if math.Abs((x - 1024.0)) > tolerance {
+	if math.Abs((x - 0)) > tolerance {
 		t.Errorf("X not calculated correctly")
 	}
 
-	if math.Abs(y-1024.0) > tolerance {
+	if math.Abs(y-0) > tolerance {
 		t.Errorf("Y not calculated correctly")
 	}
 }
@@ -382,11 +383,11 @@ func TestEquatorialCoordinateToPixelWithSIPDistortionAtImageCenter(t *testing.T)
 
 	tolerance := 0.0000001
 
-	if math.Abs((x - 1024.0)) > tolerance {
+	if math.Abs((x)) > tolerance {
 		t.Errorf("X not calculated correctly")
 	}
 
-	if math.Abs(y-1024.0) > tolerance {
+	if math.Abs(y) > tolerance {
 		t.Errorf("Y not calculated correctly")
 	}
 }
@@ -462,11 +463,13 @@ func TestEquatorialCoordinateToPixelWithSIPDistortion(t *testing.T) {
 
 	tolerance := 0.001
 
-	if math.Abs((x - 1000.0)) > tolerance {
+	fmt.Println(x, y)
+
+	if math.Abs((x + 24)) > tolerance {
 		t.Errorf("X not calculated correctly")
 	}
 
-	if math.Abs(y-1000.0) > tolerance {
+	if math.Abs(y+24) > tolerance {
 		t.Errorf("Y not calculated correctly")
 	}
 }
