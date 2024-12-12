@@ -104,10 +104,10 @@ func NewSimulatedSky(xs int, ys int, eq astrometry.ICRSEquatorialCoordinate, par
 		AffineParams: transform.Affine2DParameters{
 			A: pixelScaleX,
 			B: 0,
-			C: 0,
-			D: -pixelScaleY,
-			E: eq.RA,
-			F: eq.Dec,
+			C: eq.RA - float64(xs)/2*pixelScaleX,
+			D: 0,
+			E: pixelScaleY,
+			F: eq.Dec - float64(ys)/2*pixelScaleY,
 		},
 	}
 
