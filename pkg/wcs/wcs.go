@@ -11,12 +11,15 @@ package wcs
 /*****************************************************************************************************************/
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strings"
 
 	"github.com/observerly/skysolve/pkg/astrometry"
+	"github.com/observerly/skysolve/pkg/spatial"
 	"github.com/observerly/skysolve/pkg/transform"
+	"gonum.org/v1/gonum/mat"
 )
 
 /*****************************************************************************************************************/
@@ -300,6 +303,97 @@ func (wcs *WCS) EquatorialCoordinateToPixel(
 type PointPair struct {
 	X, Y    float64 // Generated Quad NormalisedC and NormalisedD
 	RA, Dec float64 // Source Quad SourceRA and SourceDec
+}
+
+/*****************************************************************************************************************/
+
+// ComputeAffineTransformation computes the affine transformation parameters based on matched quads.
+// It returns the affine parameters and an error if the computation fails.
+func ComputeAffineTransformation(matches []spatial.QuadMatch) (transform.Affine2DParameters, float64, float64, error) {
+	var pairs []PointPair
+
+	// Iterate over each match to extract all four point correspondences:
+	for _, match := range matches {
+		// Extract Point A:
+		pairs = append(pairs, PointPair{
+			X:   match.Quad.A.X,   // Generated Quad X
+			Y:   match.Quad.A.Y,   // Generated Quad Y
+			RA:  match.Quad.A.RA,  // Source Quad RA
+			Dec: match.Quad.A.Dec, // Source Quad Dec
+		})
+
+		// Extract Point B:
+		pairs = append(pairs, PointPair{
+			X:   match.Quad.B.X,
+			Y:   match.Quad.B.Y,
+			RA:  match.Quad.B.RA,
+			Dec: match.Quad.B.Dec,
+		})
+
+		// Extract Point C:
+		pairs = append(pairs, PointPair{
+			X:   match.Quad.C.X,
+			Y:   match.Quad.C.Y,
+			RA:  match.Quad.C.RA,
+			Dec: match.Quad.C.Dec,
+		})
+
+		// Extract Point D:
+		pairs = append(pairs, PointPair{
+			X:   match.Quad.D.X,
+			Y:   match.Quad.D.Y,
+			RA:  match.Quad.D.RA,
+			Dec: match.Quad.D.Dec,
+		})
+	}
+
+	n := len(pairs)
+	if n < 2 { // Need at least three point correspondences for affine transformation:
+		return transform.Affine2DParameters{}, math.Inf(1), math.Inf(1), errors.New("not enough point correspondences to compute affine transformation")
+	}
+
+	// Thus, for N points, we have 2N equations and 6 unknowns (a, b, c, d, e, f):
+	A := mat.NewDense(2*n, 6, nil)
+	bVec := mat.NewVecDense(2*n, nil)
+
+	for i, pair := range pairs {
+		// First equation: RA = a*X + b*Y + c:
+		A.Set(2*i, 0, pair.X) // a
+		A.Set(2*i, 1, pair.Y) // b
+		A.Set(2*i, 2, 1.0)    // c
+		A.Set(2*i, 3, 0.0)    // d
+		A.Set(2*i, 4, 0.0)    // e
+		A.Set(2*i, 5, 0.0)    // f
+		bVec.SetVec(2*i, pair.RA)
+
+		// Second equation: Dec = d*X + e*Y + f:
+		A.Set(2*i+1, 0, 0.0)    // a
+		A.Set(2*i+1, 1, 0.0)    // b
+		A.Set(2*i+1, 2, 0.0)    // c
+		A.Set(2*i+1, 3, pair.X) // d
+		A.Set(2*i+1, 4, pair.Y) // e
+		A.Set(2*i+1, 5, 1.0)    // f
+		bVec.SetVec(2*i+1, pair.Dec)
+	}
+
+	// Solve the least squares problem: A * params = b:
+	var qr mat.QR
+	qr.Factorize(A)
+
+	var params mat.VecDense
+	err := qr.SolveVecTo(&params, false, bVec)
+	if err != nil {
+		return transform.Affine2DParameters{}, math.Inf(1), math.Inf(1), fmt.Errorf("failed to solve affine transformation: %v", err)
+	}
+
+	return transform.Affine2DParameters{
+		A: params.AtVec(0),
+		B: params.AtVec(1),
+		C: params.AtVec(2),
+		D: params.AtVec(3),
+		E: params.AtVec(4),
+		F: params.AtVec(5),
+	}, 0, 0, nil
 }
 
 /*****************************************************************************************************************/
