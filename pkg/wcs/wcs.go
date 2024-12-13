@@ -295,3 +295,11 @@ func (wcs *WCS) EquatorialCoordinateToPixel(
 }
 
 /*****************************************************************************************************************/
+
+// Each match provides two point correspondences: C and D
+type PointPair struct {
+	X, Y    float64 // Generated Quad NormalisedC and NormalisedD
+	RA, Dec float64 // Source Quad SourceRA and SourceDec
+}
+
+/*****************************************************************************************************************/
