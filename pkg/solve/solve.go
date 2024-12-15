@@ -31,3 +31,17 @@ type PlateSolver struct {
 }
 
 /*****************************************************************************************************************/
+
+type Params struct {
+	Data                []float32
+	Width               int
+	Height              int
+	PixelScaleX         float64
+	PixelScaleY         float64
+	ADU                 int32
+	ExtractionThreshold float64
+	Radius              float64
+	Sigma               float64
+}
+
+/*****************************************************************************************************************/
