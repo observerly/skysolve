@@ -20,8 +20,10 @@ import (
 	"github.com/observerly/iris/pkg/photometry"
 	stats "github.com/observerly/iris/pkg/statistics"
 
+	"github.com/observerly/skysolve/pkg/astrometry"
 	"github.com/observerly/skysolve/pkg/catalog"
 	"github.com/observerly/skysolve/pkg/geometry"
+	"github.com/observerly/skysolve/pkg/healpix"
 	"github.com/observerly/skysolve/pkg/quad"
 	"github.com/observerly/skysolve/pkg/spatial"
 	"github.com/observerly/skysolve/pkg/star"
@@ -54,6 +56,13 @@ type Params struct {
 	ExtractionThreshold float64
 	Radius              float64
 	Sigma               float64
+}
+
+/*****************************************************************************************************************/
+
+type ToleranceParams struct {
+	QuadTolerance           float64 // default quad tolerance in normalised 4D space of 0.1
+	EuclidianPixelTolerance float64 // default euclidian pixel tolerance of 10 pixels
 }
 
 /*****************************************************************************************************************/
@@ -351,6 +360,139 @@ func (ps *PlateSolver) ValidateAndConfirmMatches(candidateMatches []spatial.Quad
 	}
 
 	return matches, nil
+}
+
+/*****************************************************************************************************************/
+
+func (ps *PlateSolver) Solve(tolerance ToleranceParams, sipOrder int) (*wcs.WCS, []spatial.QuadMatch, error) {
+	healpx := healpix.NewHealPIX()
+
+	stars := make([]star.Star, len(ps.Stars))
+
+	sources := make([]star.Star, len(ps.Sources))
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+
+		for i, s := range ps.Stars {
+			stars[i] = star.Star{
+				Designation: "Unknown",
+				X:           float64(s.X),
+				Y:           float64(s.Y),
+				RA:          0,
+				Dec:         0,
+				Intensity:   float64(s.Intensity),
+			}
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		for _, source := range ps.Sources {
+			// Project RA and Dec to x, y coordinates
+			x, y := healpx.ConvertEquatorialToCartesian(
+				astrometry.ICRSEquatorialCoordinate{
+					RA:  source.RA,
+					Dec: source.Dec,
+				},
+			)
+
+			sources = append(sources, star.Star{
+				Designation: source.Designation,
+				X:           x,
+				Y:           y,
+				RA:          source.RA,
+				Dec:         source.Dec,
+				Intensity:   source.PhotometricGMeanFlux,
+			})
+		}
+	}()
+
+	quads := []quad.Quad{}
+
+	sourceQuads := []quad.Quad{}
+
+	wg.Wait()
+
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+
+		// Generate our quads from the extracted stars:
+		qs, err := GenerateEuclidianStarQuads(stars, 3)
+
+		if err != nil {
+			return
+		}
+
+		quads = qs
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		// Generate our source quads from the sources:
+		qs, err := GenerateEuclidianStarQuads(sources, 3)
+
+		if err != nil {
+			return
+		}
+
+		sourceQuads = qs
+	}()
+
+	wg.Wait()
+
+	// Create a new matcher with the generated quads:
+	matcher, err := spatial.NewQuadMatcher(quads)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Match the generated quads with the source quads for a given tolerance:
+	candidateMatches, err := matcher.MatchQuads(sourceQuads, tolerance.QuadTolerance)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Now we have our candidate matches, we need to further verify them by comparing the stars within the quads.
+	// Validate and confirm matches by applying affine transformations and checking for alignment within the specified tolerance:
+	matches, err := ps.ValidateAndConfirmMatches(candidateMatches, tolerance.EuclidianPixelTolerance)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Compute the final affine transformation matrix:
+	params, xr, yr, err := wcs.ComputeAffineTransformation(matches)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Calculate the x-coordinate of the center of the image:
+	xc := float64(ps.Width) / 2.0
+
+	// Calculate the y-coordinate of the center of the image:
+	yc := float64(ps.Height) / 2.0
+
+	// Create a new WCS object with the affine transformation matrix:
+	w := wcs.NewWorldCoordinateSystem(
+		xr,
+		yr,
+		wcs.WCSParams{
+			Projection:   wcs.RADEC_TAN,
+			AffineParams: params,
+			ReferenceX:   xc,
+			ReferenceY:   yc,
+		},
+	)
+
+	return &w, matches, nil
 }
 
 /*****************************************************************************************************************/
