@@ -12,6 +12,7 @@ package solve
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"sort"
 	"sync"
@@ -22,7 +23,9 @@ import (
 	"github.com/observerly/skysolve/pkg/catalog"
 	"github.com/observerly/skysolve/pkg/geometry"
 	"github.com/observerly/skysolve/pkg/quad"
+	"github.com/observerly/skysolve/pkg/spatial"
 	"github.com/observerly/skysolve/pkg/star"
+	"github.com/observerly/skysolve/pkg/wcs"
 )
 
 /*****************************************************************************************************************/
@@ -257,6 +260,97 @@ func GenerateEuclidianStarQuads(stars []star.Star, precision int) ([]quad.Quad, 
 
 	// Return the aggregated list of quads:
 	return quads, nil
+}
+
+/*****************************************************************************************************************/
+
+// ValidateAndConfirmMatches iterates through pairs of candidate matches, computes affine transformations,
+// applies them, and retains only those matches where both quads align within the specified tolerance.
+func (ps *PlateSolver) ValidateAndConfirmMatches(candidateMatches []spatial.QuadMatch, tolerance float64) ([]spatial.QuadMatch, error) {
+	if len(candidateMatches) == 0 {
+		return []spatial.QuadMatch{}, errors.New("no candidate matches provided")
+	}
+
+	matches := []spatial.QuadMatch{}
+	maximumConfirmations := 0
+
+	// Create a wait group to wait for all goroutines to finish:
+	wg := sync.WaitGroup{}
+
+	// Add the number of candidate matches to the wait group:
+	wg.Add(len(candidateMatches))
+
+	for _, match := range candidateMatches {
+		// Initialize a slice to hold confirming matches for the current quad:
+		var confirmingMatches []spatial.QuadMatch
+
+		// Assuming ComputeAffineTransformation expects a slice of spatial.QuadMatch and uses the Quad points within
+		// the spatial.QuadMatch to compute the affine transformation matrix:
+		params, xr, yr, err := wcs.ComputeAffineTransformation([]spatial.QuadMatch{match})
+		if err != nil {
+			return nil, err
+		}
+
+		// Create a new WCS object with the affine transformation matrix:
+		WCS := wcs.NewWorldCoordinateSystem(
+			xr,
+			yr,
+			wcs.WCSParams{
+				Projection:   wcs.RADEC_TAN,
+				AffineParams: params,
+			},
+		)
+
+		// Ensure the affine transformation is invertible by checking the determinant of the matrix:
+		determinant := params.A*params.E - params.B*params.D
+		if determinant == 0 {
+			fmt.Println("affine transformation is not invertible for match:", match.Quad.GetHashCodeAsString())
+			continue // Skip this match as it cannot be inverted for WCS
+		}
+
+		// Now for all other candidate matches, apply the affine transformation and validate the match:
+		for _, candidate := range candidateMatches {
+			// Check that the candidate is not the same as the current match:
+			if candidate.Quad.GetHashCodeAsString() == match.Quad.GetHashCodeAsString() {
+				continue
+			}
+
+			// Original pixel coordinates of the candidate's quad points (A, B, C, D):
+			aX, aY := candidate.Quad.A.X, candidate.Quad.A.Y
+			// Apply the inverse affine transformation to get transformed pixel coordinates of the candidate's quad points:
+			xa, ya := WCS.EquatorialCoordinateToPixel(candidate.Quad.A.RA, candidate.Quad.A.Dec)
+
+			bX, bY := candidate.Quad.B.X, candidate.Quad.B.Y
+			xb, yb := WCS.EquatorialCoordinateToPixel(candidate.Quad.B.RA, candidate.Quad.B.Dec)
+
+			cX, cY := candidate.Quad.C.X, candidate.Quad.C.Y
+			xc, yc := WCS.EquatorialCoordinateToPixel(candidate.Quad.C.RA, candidate.Quad.C.Dec)
+
+			dX, dY := candidate.Quad.D.X, candidate.Quad.D.Y
+			xd, yd := WCS.EquatorialCoordinateToPixel(candidate.Quad.D.RA, candidate.Quad.D.Dec)
+
+			// Calculate the Euclidean distance between the two sets of points:
+			distA := math.Hypot(aX-xa, aY-ya)
+			distB := math.Hypot(bX-xb, bY-yb)
+			distC := math.Hypot(cX-xc, cY-yc)
+			distD := math.Hypot(dX-xd, dY-yd)
+
+			// If the distance between the two sets of points is within the specified tolerance, then we have a match:
+			if distA <= tolerance && distB <= tolerance && distC <= tolerance && distD <= tolerance {
+				confirmingMatches = append(confirmingMatches, candidate)
+			}
+		}
+
+		// Update the matches slice with the confirmed matches if they have the most confirmations
+		if len(confirmingMatches) > maximumConfirmations {
+			maximumConfirmations = len(confirmingMatches)
+			// Update the matches slice with the confirmed matches, including the original match
+			matches = append([]spatial.QuadMatch{}, confirmingMatches...)
+			matches = append(matches, match)
+		}
+	}
+
+	return matches, nil
 }
 
 /*****************************************************************************************************************/
