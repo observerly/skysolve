@@ -160,7 +160,7 @@ With the stars extracted, the algorithm matches them against a comprehensive ref
 
 #### 3. Invariant Features
 
-To ensure robust plate solving, the algorithm utilizes the invariant properties of triangles formed by stars. Specifically, the ratio of side lengths remains constant, normalizing any scale differences, while the angles between sides stay the same regardless of rotation, scaling, or translation. By comparing these invariant features from the image with those in the reference catalog, the algorithm can accurately determine the plate’s orientation and position. This approach enhances solution precision as more stars are detected and increases the likelihood of finding a matching solution with a larger reference catalog.
+Invariant geometric features are crucial for robust image registration and plate solving, particularly when astronomical images inhabit a vast hypothesis space in which exhaustive searches are impractical. Our approach employs a continuous geometric hashing technique, selecting four stars (a “quad”), defining a local coordinate system using the two most widely separated stars, and mapping the remaining two stars’ positions into a four-dimensional hash code. This code is invariant under translation, rotation, and scaling, and it is resilient to small positional noise. Furthermore, because the codes are well-distributed for uniformly scattered stars, storing them in a vp-tree enables efficient retrieval of matching quads. By identifying these invariant features in both the image and the reference catalogue, the algorithm can rapidly and accurately align the datasets, ensuring a precise and consistent plate-solving solution.
 
 #### 4. Affine Transformations
 
