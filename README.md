@@ -56,7 +56,7 @@ import (
 	"github.com/observerly/iris/pkg/fits"
 	"github.com/observerly/skysolve/pkg/astrometry"
 	"github.com/observerly/skysolve/pkg/geometry"
-	"github.com/observerly/skysolve/pkg/solver"
+	"github.com/observerly/skysolve/pkg/solve"
 )
 
 func main() {
@@ -92,20 +92,20 @@ func main() {
 		fmt.Println("dec header not found")
 		return
 	}
-	
+
+	// Get the radius based on the known but approximate pixel scale of the image:
+	radius := fov.GetRadialExtent(float64(fit.Header.Naxis1), float64(fit.Header.Naxis2), fov.PixelScale{X: pixelScaleX, Y: pixelScaleY})
+
 	// Create a new GAIA service client:
 	service := catalog.NewCatalogService(catalog.GAIA, catalog.Params{
-		Limit:     50,
-		Threshold: 8,
+		Limit:     int(math.Ceil(42 / 0.5 * radius)),
+		Threshold: 16, // Limiting Magntiude, filter out any stars that are magnitude 16 or above (fainter)
 	})
-
+	
 	eq := astrometry.ICRSEquatorialCoordinate{
 		RA:  float64(ra.Value),
 		Dec: float64(dec.Value),
 	}
-
-	// 2 degree radial search field:
-	radius := 2.0
 
 	// Perform a radial search with the given center and radius, for all sources with a magnitude less than 10:
 	sources, err := service.PerformRadialSearch(eq, radius)
@@ -115,14 +115,16 @@ func main() {
 	}
 
 	// Attempt to create a new PlateSolver:
-	solver, err := solver.NewPlateSolver(fit, solver.Params{
-		RA:                  float64(ra.Value),  // The appoximate RA of the center of the image
-		Dec:                 float64(dec.Value), // The appoximate Dec of the center of the image
-		PixelScale:          2.061 / 3600.0,     // 2.061 arcseconds per pixel (0.0005725 degrees)
-		ExtractionThreshold: 50,                 // Extract a minimum of 50 of the brightest stars
-		Radius:              16,                 // 16 pixels radius for the star extraction
-		Sigma:               8,                  // 8 pixels sigma for the Gaussian kernel
-		Sources:             sources,
+	solver, err := solve.NewPlateSolver(solve.Params{
+		Data:                fit.Data,               // The exposure data from the fits image
+		Width:               int(fit.Header.Naxis1), // The width of the image
+		Height:              int(fit.Header.Naxis2), // The height of the image
+		PixelScaleX:         pixelScaleX,            // The pixel scale in the x-axis
+		PixelScaleY:         pixelScaleY,            // The pixel scale in the y-axis
+		ADU:                 fit.ADU,                // The analog-to-digital unit of the image
+		ExtractionThreshold: 16,                     // Extract a minimum of 20 of the brightest stars
+		Radius:              16,                     // 16 pixels radius for the star extraction
+		Sigma:               2.5,                    // 8 pixels sigma for the Gaussian kernel
 	})
 	if err != nil {
 		fmt.Printf("there was an error while creating the plate solver: %v", err)
@@ -130,13 +132,15 @@ func main() {
 	}
 
 	// Define the tolerances for the solver, we can adjust these as needed:
-	tolerances := geometry.InvariantFeatureTolerance{
-		LengthRatio: 0.025, // 5% tolerance in side length ratios
-		Angle:       0.5,   // 1 degree tolerance in angles
+	tolerance := solve.ToleranceParams{
+		QuadTolerance:           0.02,
+		EuclidianPixelTolerance: 10,
 	}
 
-	// Extract the WCS solution from the solver:
-	wcs, err := solver.Solve(tolerances, 3)
+	solver.Sources = append(solver.Sources, sources...)
+
+	// Extract the WCS solution, as well as the matches, from the solver:
+	wcs, matches, err := solver.Solve(tolerance, 3)
 	if err != nil {
 		fmt.Printf("an error occured while plate solving: %v", err)
 		return
