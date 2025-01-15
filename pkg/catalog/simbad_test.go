@@ -9,7 +9,6 @@
 package catalog
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/observerly/skysolve/pkg/astrometry"
@@ -38,8 +37,6 @@ func TestSIMBADQueryExecutedSuccessfully(t *testing.T) {
 		if !IsWithinICRSPolarRadius(star.RA, star.Dec, 2.5) {
 			t.Errorf("Star is not within the search radius")
 		}
-
-		fmt.Println(star.Designation)
 	}
 
 	// The SIMBAD catalog is expected to return a maximum of 100 stars for this query:
