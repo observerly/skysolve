@@ -11,7 +11,6 @@ package wcs
 /*****************************************************************************************************************/
 
 import (
-	"fmt"
 	"math"
 	"testing"
 
@@ -462,8 +461,6 @@ func TestEquatorialCoordinateToPixelWithSIPDistortion(t *testing.T) {
 	x, y := wcs.EquatorialCoordinateToPixel(coordinate.RA, coordinate.Dec)
 
 	tolerance := 0.001
-
-	fmt.Println(x, y)
 
 	if math.Abs((x + 24)) > tolerance {
 		t.Errorf("X not calculated correctly")
