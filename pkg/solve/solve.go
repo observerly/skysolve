@@ -365,7 +365,7 @@ func (ps *PlateSolver) ValidateAndConfirmMatches(candidateMatches []spatial.Quad
 /*****************************************************************************************************************/
 
 func (ps *PlateSolver) Solve(tolerance ToleranceParams, sipOrder int) (*wcs.WCS, []spatial.QuadMatch, error) {
-	healpx := healpix.NewHealPIX()
+	healpx := healpix.NewHealPIX(256, healpix.RING)
 
 	stars := make([]star.Star, len(ps.Stars))
 
