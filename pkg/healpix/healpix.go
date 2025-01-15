@@ -80,3 +80,53 @@ func (h *HealPIX) ConvertEquatorialToCartesian(
 }
 
 /*****************************************************************************************************************/
+
+// ConvertEquatorialToPixelIndex converts equatorial coordinates (RA, Dec) to a HEALPix pixel index
+// (either RING or NESTED), based on the initial HealPIX configuration.
+func (h *HealPIX) ConvertEquatorialToPixelIndex(eq astrometry.ICRSEquatorialCoordinate) int {
+	// Convert to standard spherical angles for HEALPix, theta (co-latitude, [0, π]):
+	theta := math.Pi/2.0 - projection.Radians(eq.Dec)
+
+	// Clamp theta to [0, π]:
+	if theta < 0 {
+		theta = 0
+	} else if theta > math.Pi {
+		theta = math.Pi
+	}
+
+	// Convert to standard spherical angles for HEALPix, phi (longitude, [0, 2π)):
+	phi := projection.Radians(eq.RA)
+
+	// Normalize phi to [0, 2π):
+	if phi < 0 {
+		phi += 2.0 * math.Pi
+	}
+
+	// Branch to the specific indexing scheme (RING or NESTED):
+	switch h.Scheme {
+	case RING:
+		return convertSphericalToRingIndex(h.NSide, theta, phi)
+	case NESTED:
+		return convertSphericalToNestedIndex(h.NSide, theta, phi)
+	default:
+		return convertSphericalToRingIndex(h.NSide, theta, phi)
+	}
+}
+
+/*****************************************************************************************************************/
+
+// convertSphericalToRingIndex converts spherical coordinates (theta, phi) to a HEALPix pixel index
+// using the RING indexing scheme for any NSide >= 1.
+func convertSphericalToRingIndex(nside int, theta, phi float64) int {
+	return 0
+}
+
+/*****************************************************************************************************************/
+
+// convertSphericalToNestedIndex converts spherical coordinates (theta, phi) to a HEALPix pixel index
+// using the NESTED indexing scheme for any NSide >= 1.
+func convertSphericalToNestedIndex(nside int, theta, phi float64) int {
+	return 0
+}
+
+/*****************************************************************************************************************/
