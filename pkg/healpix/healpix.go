@@ -40,8 +40,19 @@ type HealPIX struct {
 
 // HEALPix, i.e., the "Hierarchical Equal Area isoLatitude Pixelization", is a versatile structure for the
 // pixelization of coordinates on the sphere.
-func NewHealPIX() *HealPIX {
+// @see https://healpix.jpl.nasa.gov/html/intro.htm
+// @see https://healpix.sourceforge.io/pdf/intro.pdf
+func NewHealPIX(sides int, scheme Scheme) *HealPIX {
+	// Ensure the NSide is a power of 2 (2^k) and greater than 0:
+	if sides < 1 {
+		sides = 1
+	} else {
+		sides = 1 << uint(math.Round(math.Log2(float64(sides))))
+	}
+
 	return &HealPIX{
+		NSide:                 sides,
+		Scheme:                scheme,
 		Longitude:             180.0,
 		Latitude:              0.0,
 		PolarLatitudeBoundary: 2.0 / 3.0, // in radians (approximately 38.1972 degrees)
