@@ -29,6 +29,8 @@ const (
 /*****************************************************************************************************************/
 
 type HealPIX struct {
+	NSide                 int
+	Scheme                Scheme
 	Longitude             float64
 	Latitude              float64
 	PolarLatitudeBoundary float64
