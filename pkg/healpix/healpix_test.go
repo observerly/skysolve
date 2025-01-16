@@ -648,10 +648,3 @@ func TestHealpixSouthPole(t *testing.T) {
 }
 
 /*****************************************************************************************************************/
-
-// Helper function to convert integer to string (since Go doesn't have a built-in itoa function in the standard library)
-func itoa(i int) string {
-	return fmt.Sprintf("%d", i)
-}
-
-/*****************************************************************************************************************/
