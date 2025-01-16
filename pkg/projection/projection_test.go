@@ -13,6 +13,8 @@ package projection
 import (
 	"math"
 	"testing"
+
+	"github.com/observerly/skysolve/pkg/astrometry"
 )
 
 /*****************************************************************************************************************/
@@ -138,6 +140,81 @@ func TestConvertEquatorialToGnomicFortyFiveDegreesOffset(t *testing.T) {
 
 	if !floatEquals(x, expectedX, 1e-6) || !floatEquals(y, expectedY, 1e-6) {
 		t.Errorf("Forty-Five Degrees Offset Case Failed: Expected (%f, %f), Got (%f, %f)", expectedX, expectedY, x, y)
+	}
+}
+
+/*****************************************************************************************************************/
+
+// TestGetEquatorialCoordinateFromPolarOffset_ZeroOffset verifies that zero offset returns the original coordinates.
+func TestGetEquatorialCoordinateFromPolarOffset_ZeroOffset(t *testing.T) {
+	center := astrometry.ICRSEquatorialCoordinate{
+		RA:  180.0,
+		Dec: 45.0,
+	}
+	z := 0.0
+	theta := 0.0 // Azimuth is irrelevant when z=0
+
+	expectedRA := center.RA
+	expectedDec := center.Dec
+
+	ra, dec := GetEquatorialCoordinateFromPolarOffset(center.RA, center.Dec, z, theta)
+
+	tolerance := 1e-6
+	if math.Abs(ra-expectedRA) > tolerance {
+		t.Errorf("Zero Offset Test Failed: expected RA %.6f, got %.6f", expectedRA, ra)
+	}
+	if math.Abs(dec-expectedDec) > tolerance {
+		t.Errorf("Zero Offset Test Failed: expected Dec %.6f, got %.6f", expectedDec, dec)
+	}
+}
+
+// TestGetEquatorialCoordinateFromPolarOffset_PureNorthOffset verifies that moving north increases declination correctly.
+func TestGetEquatorialCoordinateFromPolarOffset_PureNorthOffset(t *testing.T) {
+	center := astrometry.ICRSEquatorialCoordinate{
+		RA:  180.0,
+		Dec: 45.0,
+	}
+
+	z := 10.0    // degrees
+	theta := 0.0 // Azimuth pointing north
+
+	expectedRA := center.RA
+	expectedDec := center.Dec + z
+
+	ra, dec := GetEquatorialCoordinateFromPolarOffset(center.RA, center.Dec, z, theta)
+
+	tolerance := 1e-6
+	if math.Abs(ra-expectedRA) > tolerance {
+		t.Errorf("Pure North Offset Test Failed: expected RA %.6f, got %.6f", expectedRA, ra)
+	}
+	if math.Abs(dec-expectedDec) > tolerance {
+		t.Errorf("Pure North Offset Test Failed: expected Dec %.6f, got %.6f", expectedDec, dec)
+	}
+}
+
+// TestGetEquatorialCoordinateFromPolarOffset_PureEastOffset verifies that moving east increases right ascension correctly, including RA normalization.
+func TestGetEquatorialCoordinateFromPolarOffset_PureEastOffset(t *testing.T) {
+	center := astrometry.ICRSEquatorialCoordinate{
+		RA:  350.0, // degrees
+		Dec: 0.0,
+	}
+	z := 20.0     // degrees
+	theta := 90.0 // Azimuth pointing east
+
+	expectedRA := center.RA + z
+	if expectedRA >= 360.0 {
+		expectedRA -= 360.0
+	}
+	expectedDec := center.Dec
+
+	ra, dec := GetEquatorialCoordinateFromPolarOffset(center.RA, center.Dec, z, theta)
+
+	tolerance := 1e-6
+	if math.Abs(ra-expectedRA) > tolerance {
+		t.Errorf("Pure East Offset Test Failed: expected RA %.6f, got %.6f", expectedRA, ra)
+	}
+	if math.Abs(dec-expectedDec) > tolerance {
+		t.Errorf("Pure East Offset Test Failed: expected Dec %.6f, got %.6f", expectedDec, dec)
 	}
 }
 
