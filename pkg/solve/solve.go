@@ -20,10 +20,8 @@ import (
 	"github.com/observerly/iris/pkg/photometry"
 	stats "github.com/observerly/iris/pkg/statistics"
 
-	"github.com/observerly/skysolve/pkg/astrometry"
 	"github.com/observerly/skysolve/pkg/catalog"
 	"github.com/observerly/skysolve/pkg/geometry"
-	"github.com/observerly/skysolve/pkg/healpix"
 	"github.com/observerly/skysolve/pkg/quad"
 	"github.com/observerly/skysolve/pkg/spatial"
 	"github.com/observerly/skysolve/pkg/star"
@@ -365,8 +363,6 @@ func (ps *PlateSolver) ValidateAndConfirmMatches(candidateMatches []spatial.Quad
 /*****************************************************************************************************************/
 
 func (ps *PlateSolver) Solve(tolerance ToleranceParams, sipOrder int) (*wcs.WCS, []spatial.QuadMatch, error) {
-	healpx := healpix.NewHealPIX(256, healpix.RING)
-
 	stars := make([]star.Star, len(ps.Stars))
 
 	sources := make([]star.Star, len(ps.Sources))
@@ -383,8 +379,8 @@ func (ps *PlateSolver) Solve(tolerance ToleranceParams, sipOrder int) (*wcs.WCS,
 				Designation: "Unknown",
 				X:           float64(s.X),
 				Y:           float64(s.Y),
-				RA:          0,
-				Dec:         0,
+				RA:          math.Inf(1),
+				Dec:         math.Inf(1),
 				Intensity:   float64(s.Intensity),
 			}
 		}
@@ -394,18 +390,10 @@ func (ps *PlateSolver) Solve(tolerance ToleranceParams, sipOrder int) (*wcs.WCS,
 		defer wg.Done()
 
 		for _, source := range ps.Sources {
-			// Project RA and Dec to x, y coordinates
-			x, y := healpx.ConvertEquatorialToCartesian(
-				astrometry.ICRSEquatorialCoordinate{
-					RA:  source.RA,
-					Dec: source.Dec,
-				},
-			)
-
 			sources = append(sources, star.Star{
 				Designation: source.Designation,
-				X:           x,
-				Y:           y,
+				X:           source.RA,
+				Y:           source.Dec,
 				RA:          source.RA,
 				Dec:         source.Dec,
 				Intensity:   source.PhotometricGMeanFlux,
