@@ -91,3 +91,37 @@ func ConvertEquatorialToInterruptedCollignonCartesian(eq astrometry.ICRSEquatori
 }
 
 /*****************************************************************************************************************/
+
+func GetEquatorialCoordinateFromPolarOffset(ra, dec, z, θ float64) (x, y float64) {
+	// Convert all coordinates from degrees to radians:
+	ra0 := Radians(ra)
+	dec0 := Radians(dec)
+	r := Radians(z)
+	θ = Radians(θ)
+
+	// Calculate the declination for the polar offset:
+	dec = math.Asin(
+		math.Sin(dec0)*math.Cos(r) +
+			math.Cos(dec0)*math.Sin(r)*math.Cos(θ),
+	)
+
+	// Calculate the right ascension for the polar offset:
+	ra = ra0 + math.Atan2(
+		math.Sin(θ)*math.Sin(r)*math.Cos(dec0),
+		math.Cos(r)-math.Sin(dec0)*math.Sin(dec),
+	)
+
+	// Normalize the right ascension to the range [0, 2π) if it is less than 0:
+	for ra < 0 {
+		ra += 2.0 * math.Pi
+	}
+
+	// Normalize the right ascension to the range [0, 2π) if it is greater than 2π:
+	for ra >= 2.0*math.Pi {
+		ra -= 2.0 * math.Pi
+	}
+	// Return the right ascension and declination in degrees:
+	return Degrees(ra), Degrees(dec)
+}
+
+/*****************************************************************************************************************/
