@@ -61,6 +61,12 @@ func NewHealPIX(sides int, scheme Scheme) *HealPIX {
 
 /*****************************************************************************************************************/
 
+// GetNSide returns the NSide value for the HEALPix projection.
+func (h *HealPIX) GetNSide() int {
+	return h.NSide
+}
+
+/*****************************************************************************************************************/
 // ConvertEquatorialToCartesian converts equatorial coordinates (RA, Dec) to cartesian coordinates (x, y)
 // using the HEALPix projection, see (https://healpix.sourceforge.io/) for further detail.
 // The HEALPix projection is a hybrid projection that uses the interrupted Collignon projection for the
