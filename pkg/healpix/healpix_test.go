@@ -65,6 +65,61 @@ func TestHealpixGetPixelArea(t *testing.T) {
 
 /*****************************************************************************************************************/
 
+// TestHealpixGetPixelRadialExtent tests the GetPixelRadialExtent method for various NSide values.
+// It verifies that the calculated radial extent matches the expected values within a small tolerance.
+func TestHealpixGetPixelRadialExtent(t *testing.T) {
+	// Define a slice of NSide values to test
+	nsides := []int{128, 256, 512, 1024}
+
+	// Define expected radial extents based on HEALPix pixel area calculations
+	// These values are approximate and based on the formula:
+	// r = arccos(1 - A / (2π)) where A = 4π / Npixels
+	// Convert the result from radians to degrees
+	expectedRadialExtents := map[int]float64{
+		128:  0.2584, // degrees
+		256:  0.1292, // degrees
+		512:  0.0646, // degrees
+		1024: 0.0323, // degrees
+	}
+
+	// Define a small tolerance for floating-point comparisons
+	tolerance := 1e-4 // degrees
+
+	for _, nside := range nsides {
+		// Define the test case name
+		testName := fmt.Sprintf("NSide=%d,Scheme=RING", nside)
+
+		// Run subtests for each NSide
+		t.Run(testName, func(t *testing.T) {
+			// Initialize HealPIX with the current NSide and RING scheme
+			hpRing := NewHealPIX(nside, RING)
+
+			// Choose a representative pixel ID (e.g., 0)
+			pixelID := 0
+
+			// Calculate the radial extent using the method under test
+			calculatedRadialExtent := hpRing.GetPixelRadialExtent(pixelID)
+
+			// Retrieve the expected radial extent
+			expectedRadialExtent, exists := expectedRadialExtents[nside]
+			if !exists {
+				t.Fatalf("No expected radial extent defined for NSide=%d", nside)
+			}
+
+			// Calculate the absolute difference
+			diff := math.Abs(calculatedRadialExtent - expectedRadialExtent)
+
+			// Check if the difference exceeds the tolerance
+			if diff > tolerance {
+				t.Errorf("RING Scheme: NSide=%d, PixelID=%d => Expected Radial Extent=%.6f°, Got=%.6f° (Difference=%.6f°)",
+					nside, pixelID, expectedRadialExtent, calculatedRadialExtent, diff)
+			}
+		})
+	}
+}
+
+/*****************************************************************************************************************/
+
 // TestHealpixNorthPole tests the North Pole coordinates across multiple NSide values using both RING and NESTED schemes.
 func TestHealpixNorthPole(t *testing.T) {
 	ra := 0.0
