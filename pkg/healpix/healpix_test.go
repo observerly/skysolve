@@ -12,6 +12,7 @@ package healpix
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/observerly/skysolve/pkg/astrometry"
@@ -644,6 +645,29 @@ func TestHealpixSouthPole(t *testing.T) {
 				}
 			},
 		)
+	}
+}
+
+/*****************************************************************************************************************/
+
+func TestGetPixelIndicesFromEquatorialRadialRegion(t *testing.T) {
+	nside := 2
+
+	healpix := NewHealPIX(nside, RING)
+
+	eq := astrometry.ICRSEquatorialCoordinate{
+		RA:  0.0,
+		Dec: 0.0,
+	}
+
+	radius := 1.2
+
+	pixelIndices := healpix.GetPixelIndicesFromEquatorialRadialRegion(eq, radius)
+
+	expectedPixelIndices := []int{12, 20, 28, 27}
+
+	if !reflect.DeepEqual(pixelIndices, expectedPixelIndices) {
+		t.Errorf("Expected Pixel Indices=%v, Got Pixel Indices=%v", expectedPixelIndices, pixelIndices)
 	}
 }
 

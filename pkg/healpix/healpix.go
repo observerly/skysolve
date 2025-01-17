@@ -115,6 +115,68 @@ func (h *HealPIX) ConvertEquatorialToPixelIndex(eq astrometry.ICRSEquatorialCoor
 
 /*****************************************************************************************************************/
 
+// GetPixelIndicesFromEquatorialRadialRegion returns a list of HEALPix pixel indices for a given equatorial
+// coordinate and radius.
+func (h *HealPIX) GetPixelIndicesFromEquatorialRadialRegion(
+	eq astrometry.ICRSEquatorialCoordinate,
+	radius float64, // in degrees
+) []int {
+	// Use a map to collect unique pixel indices for the radial region:
+	pixelIndices := make(map[int]bool)
+
+	// This slice will store the pixel indices for the radial region:
+	pixels := make([]int, 0)
+
+	// Number of steps to take in the radial region should be proportional to the radius to ensure we always
+	// sample the radial region consistently:
+	steps := int(math.Ceil(radius * 10))
+
+	// Our initial equatorial coordinate is the center of the radial region:
+	center := eq
+
+	// We aim to take a radial sub-sample of equatorial coordinates within the given radius,
+	// and convert them to HEALPix pixel indices. We perform an polar radial sample of points inside
+	// the given radius, and convert them to HEALPix pixel indices.
+	for i := 0; i <= steps; i++ {
+		r := (float64(i) / float64(steps)) * radius
+
+		// For the central point, we simple add the central equatorial coordinate to the map:
+		if r == 0 {
+			i := h.ConvertEquatorialToPixelIndex(center)
+
+			if _, exists := pixelIndices[i]; !exists {
+				pixelIndices[i] = true
+				pixels = append(pixels, i)
+			}
+
+			continue
+		}
+
+		// Cycle over the azimuthal angle range to sample equatorial coordinates, in 15 degree increments:
+		for az := 0.0; az <= 360.0; az += 15.0 {
+			ra, dec := projection.GetEquatorialCoordinateFromPolarOffset(
+				eq.RA, eq.Dec, r, az,
+			)
+
+			eq := astrometry.ICRSEquatorialCoordinate{
+				RA:  ra,
+				Dec: dec,
+			}
+
+			i := h.ConvertEquatorialToPixelIndex(eq)
+
+			if _, exists := pixelIndices[i]; !exists {
+				pixelIndices[i] = true
+				pixels = append(pixels, i)
+			}
+		}
+	}
+
+	return pixels
+}
+
+/*****************************************************************************************************************/
+
 // convertSphericalToRingIndex converts spherical coordinates (theta, phi) to a HEALPix pixel index
 // using the RING indexing scheme for any NSide >= 1.
 func convertSphericalToRingIndex(nside int, theta, phi float64) int {

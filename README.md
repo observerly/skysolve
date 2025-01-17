@@ -174,7 +174,7 @@ To align the captured image with the reference catalog, the algorithm employs af
 
 ### To Do
 
-- [ ] For an approximate `{ ra, dec }` and a known field of view, compute the corresponding HEALPix cell for N side 128 and 256 to ensure fast and efficient index lookups for a given equatorial coordinate space region.
+- [x] For an approximate `{ ra, dec }` and a known field of view, compute the corresponding HEALPix cell for N side 128 and 256 to ensure fast and efficient index lookups for a given equatorial coordinate space region.
 - [ ] Implement an offline-first index of HEALPix cells for the GAIA DR2 & DR3 catalog.
 - [ ] Implement an online way to retrieve all notable objects from SIMBAD in an image region.
 - [ ] Improve robustness, accuracy and precision of the plate solving algorithm down to a precision of +/- 2 degrees in RA and Dec from the approximate known coordinates.
@@ -196,6 +196,7 @@ As always, human knowledge is built on the shoulders of giants. This project wou
 - [Twirl](https://github.com/lgrcia/twirl) - Modern, astrometric plate solving package for Python.
 - [The GAIA DR3 Catalog](https://www.cosmos.esa.int/web/gaia/dr3) - The most accurate and precise sky source catalog in existence.
 - [The Sloan Digital Sky Survey](https://www.sdss.org/) - The most comprehensive digital sky survey in existence.
+- [HEALPix](https://healpix.sourceforge.io/) - The Hierarchical Equal Area isoLatitude Pixelization of the sphere, without which, indexing of the night sky would not be possible.
 
 ### Standing On The Shoulders Of Giants
 
