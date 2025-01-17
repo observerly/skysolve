@@ -12,6 +12,7 @@ package healpix
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"testing"
 
@@ -27,6 +28,38 @@ func TestHealpixGetNSide(t *testing.T) {
 
 	if healpix.GetNSide() != nside {
 		t.Errorf("Expected NSide=%d, Got NSide=%d", nside, healpix.GetNSide())
+	}
+}
+
+/*****************************************************************************************************************/
+
+func TestHealpixGetPixelArea(t *testing.T) {
+	// Define a slice of NSide values to test
+	nsides := []int{128, 256, 512, 1024}
+
+	// Define expected pixel areas based on your JSON data
+	expectedPixelAreas := map[int]float64{
+		128:  0.209823,
+		256:  0.052456,
+		512:  0.013114,
+		1024: 0.003278,
+	}
+
+	for _, nside := range nsides {
+		// Test RING Scheme
+		t.Run(
+			fmt.Sprintf("NSide=%d,Scheme=RING", nside),
+			func(t *testing.T) {
+				hpRing := NewHealPIX(nside, RING)
+				pixelAreaRing := hpRing.GetPixelArea()
+				expectedPixelArea := expectedPixelAreas[nside]
+
+				if math.Abs(pixelAreaRing-expectedPixelArea) > 1e-6 {
+					t.Errorf("RING Scheme: NSide=%d => Expected Pixel Area=%.6f, Got Pixel Area=%.6f",
+						nside, expectedPixelArea, pixelAreaRing)
+				}
+			},
+		)
 	}
 }
 
