@@ -67,6 +67,13 @@ func (h *HealPIX) GetNSide() int {
 }
 
 /*****************************************************************************************************************/
+
+// GetNumberOfPixels returns the total number of pixels in the HEALPix projection for the given NSide.
+func (h *HealPIX) GetNumberOfPixels() int {
+	return 12 * h.NSide * h.NSide
+}
+
+/*****************************************************************************************************************/
 // ConvertEquatorialToCartesian converts equatorial coordinates (RA, Dec) to cartesian coordinates (x, y)
 // using the HEALPix projection, see (https://healpix.sourceforge.io/) for further detail.
 // The HEALPix projection is a hybrid projection that uses the interrupted Collignon projection for the
