@@ -74,6 +74,21 @@ func (h *HealPIX) GetNumberOfPixels() int {
 }
 
 /*****************************************************************************************************************/
+
+// GetPixelArea returns the area of each pixel in the HEALPix projection, in degrees.
+func (h *HealPIX) GetPixelArea() float64 {
+	// Get the number of pixels for the given NSide:
+	n := h.GetNumberOfPixels()
+
+	// Calculate the area of each pixel (in radians):
+	A := 4.0 * math.Pi / float64(n)
+
+	// Convert the area to degrees:
+	return A * math.Pow(projection.RAD2DEG, 2)
+}
+
+/*****************************************************************************************************************/
+
 // ConvertEquatorialToCartesian converts equatorial coordinates (RA, Dec) to cartesian coordinates (x, y)
 // using the HEALPix projection, see (https://healpix.sourceforge.io/) for further detail.
 // The HEALPix projection is a hybrid projection that uses the interrupted Collignon projection for the
