@@ -20,6 +20,18 @@ import (
 
 /*****************************************************************************************************************/
 
+func TestHealpixGetNSide(t *testing.T) {
+	nside := 2
+
+	healpix := NewHealPIX(nside, RING)
+
+	if healpix.GetNSide() != nside {
+		t.Errorf("Expected NSide=%d, Got NSide=%d", nside, healpix.GetNSide())
+	}
+}
+
+/*****************************************************************************************************************/
+
 // TestHealpixNorthPole tests the North Pole coordinates across multiple NSide values using both RING and NESTED schemes.
 func TestHealpixNorthPole(t *testing.T) {
 	ra := 0.0
