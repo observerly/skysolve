@@ -27,7 +27,7 @@ Enhanced Precision: Leverages prior pointing information to improve the accuracy
 
 #### Zero Dependencies
 
-Seamless Integration: Easily incorporate into your projects without the need to manage additional libraries or interoperating with C or C++ modules, simplifying deployment and maintenance.
+Seamless Integration: Easily incorporate into your projects *without* the need to manage additional libraries or interoperating with C or C++ modules, third-party dependencies or Linux packages, simplifying usage, deployment and maintenance.
   
 #### High Performance
 
