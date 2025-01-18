@@ -131,13 +131,13 @@ func main() {
 		return
 	}
 
+	solver.Sources = append(solver.Sources, sources...)
+
 	// Define the tolerances for the solver, we can adjust these as needed:
 	tolerance := solve.ToleranceParams{
 		QuadTolerance:           0.02,
 		EuclidianPixelTolerance: 10,
 	}
-
-	solver.Sources = append(solver.Sources, sources...)
 
 	// Extract the WCS solution, as well as the matches, from the solver:
 	wcs, matches, err := solver.Solve(tolerance, 3)
