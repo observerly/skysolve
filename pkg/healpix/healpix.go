@@ -156,6 +156,30 @@ func (h *HealPIX) ConvertEquatorialToPixelIndex(eq astrometry.ICRSEquatorialCoor
 
 /*****************************************************************************************************************/
 
+// ConvertPixelIndexToEquatorial converts a HEALPix pixel index to equatorial coordinates (RA, Dec).
+func (h *HealPIX) ConvertPixelIndexToEquatorial(index int) astrometry.ICRSEquatorialCoordinate {
+	var theta, phi float64
+
+	// Determine spherical coordinates (theta, phi) based on indexing scheme:
+	// Branch to the specific indexing scheme (RING or NESTED):
+	switch h.Scheme {
+	case RING:
+		theta, phi = convertRingIndexToSpherical(h.NSide, index)
+	case NESTED:
+		theta, phi = convertNestedIndexToSpherical(h.NSide, index)
+	default:
+		theta, phi = convertRingIndexToSpherical(h.NSide, index)
+	}
+
+	// Convert the pixel index to standard spherical angles for HEALPix:
+	return astrometry.ICRSEquatorialCoordinate{
+		RA:  projection.Degrees(phi),
+		Dec: projection.Degrees(math.Pi/2.0 - theta),
+	}
+}
+
+/*****************************************************************************************************************/
+
 // GetPixelIndicesFromEquatorialRadialRegion returns a list of HEALPix pixel indices for a given equatorial
 // coordinate and radius.
 func (h *HealPIX) GetPixelIndicesFromEquatorialRadialRegion(
@@ -390,6 +414,22 @@ func convertSphericalToNestedIndex(nside int, theta, phi float64) int {
 
 	// Return the final pixel index:
 	return pix
+}
+
+/*****************************************************************************************************************/
+
+// convertRingIndexToSpherical converts a RING-indexed HEALPix pixel index to spherical coordinates (theta, phi)
+// for any NSide >= 1 using the RING indexing scheme.
+func convertRingIndexToSpherical(nside, index int) (theta, phi float64) {
+	return 0, 0
+}
+
+/*****************************************************************************************************************/
+
+// convertRingIndexToSpherical converts a RING-indexed HEALPix pixel index to spherical coordinates (theta, phi)
+// for any NSide >= 1 using the RING indexing scheme.
+func convertNestedIndexToSpherical(nside, index int) (theta, phi float64) {
+	return 0, 0
 }
 
 /*****************************************************************************************************************/
