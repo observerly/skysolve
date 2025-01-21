@@ -291,8 +291,8 @@ func (wcs *WCS) EquatorialCoordinateToPixel(
 	deltaY += B
 
 	// Add the reference pixel coordinates to obtain final pixel positions
-	x = deltaX
-	y = deltaY
+	x = deltaX + wcs.CRPIX1
+	y = deltaY + wcs.CRPIX2
 
 	return x, y
 }
