@@ -102,11 +102,11 @@ func NewSimulatedSky(xs int, ys int, eq astrometry.ICRSEquatorialCoordinate, par
 	wcsParams := wcs.WCSParams{
 		Projection: wcs.RADEC_TAN,
 		AffineParams: transform.Affine2DParameters{
-			A: pixelScaleX,
+			A: -pixelScaleX,
 			B: 0,
-			C: 0,
-			D: -pixelScaleY,
-			E: eq.RA,
+			C: eq.RA,
+			D: 0,
+			E: pixelScaleY,
 			F: eq.Dec,
 		},
 	}
