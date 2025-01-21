@@ -421,15 +421,193 @@ func convertSphericalToNestedIndex(nside int, theta, phi float64) int {
 // convertRingIndexToSpherical converts a RING-indexed HEALPix pixel index to spherical coordinates (theta, phi)
 // for any NSide >= 1 using the RING indexing scheme.
 func convertRingIndexToSpherical(nside, index int) (theta, phi float64) {
-	return 0, 0
+	ncap := 2 * nside * (nside - 1) // Number of pixels in polar caps
+
+	// Adjust pixel index to start from 1 (HEALPix uses 1-based indexing):
+	ipix1 := index + 1
+
+	// Determine the region of the HEALPix map the pixel belongs to:
+	switch {
+	case ipix1 <= ncap:
+		// North polar cap region:
+		halfIpix := float64(ipix1) / 2.0
+
+		// Determine the ring index 'ir' for the north polar cap:
+		ir := int(math.Floor(math.Sqrt(halfIpix-math.Sqrt(math.Floor(halfIpix))))) + 1
+
+		// Calculate the pixel index within the current ring 'iphi':
+		iphi := ipix1 - 2*ir*(ir-1)
+
+		// Calculate theta (colatitude) using the ring index:
+		theta = math.Acos(1.0 - float64(ir*ir)/(3.0*float64(nside*nside)))
+
+		// Calculate phi (longitude) by scaling the pixel index within the ring:
+		phi = (float64(iphi) - 0.5) * (math.Pi / (2.0 * float64(ir)))
+
+	case ipix1 <= 2*nside*(5*nside+1):
+		// Equatorial region:
+		// Adjust the pixel index relative to the polar caps:
+		ip := ipix1 - ncap - 1
+
+		// Determine the ring index 'ir' for the equatorial region:
+		ir := ip/(4*nside) + nside
+
+		// Calculate the pixel index within the current ring 'iphi':
+		iphi := ip%(4*nside) + 1
+
+		// Calculate the oddness factor 'fodd' to adjust phi for even/odd rings:
+		fodd := 0.5 * float64((ir+nside)%2+1)
+
+		// Calculate theta (colatitude) using the ring index:
+		theta = math.Acos(float64(2*nside-ir) / (1.5 * float64(nside)))
+
+		// Calculate phi (longitude) by scaling the pixel index within the ring:
+		phi = (float64(iphi) - fodd) * (math.Pi / (2.0 * float64(nside)))
+
+	default:
+		// South polar cap region:
+		// Adjust the pixel index relative to the total number of pixels:
+		ip := 12*nside*nside - ipix1 + 1
+
+		// Calculate the intermediate value 'halfIpix':
+		halfIpix := float64(ip) / 2.0
+
+		// Determine the ring index 'ir' for the south polar cap:
+		ir := int(math.Floor(math.Sqrt(halfIpix-math.Sqrt(math.Floor(halfIpix))))) + 1
+
+		// Calculate the pixel index within the current ring 'iphi':
+		iphi := 4*ir + 1 - (ip - 2*ir*(ir-1))
+
+		// Calculate theta (colatitude) using the ring index:
+		theta = math.Acos(-1.0 + float64(ir*ir)/(3.0*float64(nside*nside)))
+
+		// Calculate phi (longitude) by scaling the pixel index within the ring:
+		phi = (float64(iphi) - 0.5) * (math.Pi / (2.0 * float64(ir)))
+	}
+
+	return theta, phi
 }
 
 /*****************************************************************************************************************/
 
-// convertRingIndexToSpherical converts a RING-indexed HEALPix pixel index to spherical coordinates (theta, phi)
-// for any NSide >= 1 using the RING indexing scheme.
+// convertNestedIndexToSpherical converts a NESTED-indexed HEALPix pixel index to spherical coordinates (theta, phi)
+// for any NSide >= 1 using the NESTED indexing scheme.
 func convertNestedIndexToSpherical(nside, index int) (theta, phi float64) {
-	return 0, 0
+	// Define the ring number lower limits for each of the 12 HEALPix faces:
+	jrll := [12]int{2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4}
+
+	// Define the phi number lower limits for each of the 12 HEALPix faces:
+	jpll := [12]int{1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7}
+
+	// Bit interleaving (nest2xyf) lookup table to extract ix and iy from the pixel index:
+	var ctab = [256]int{
+		0x0000, 0x0001, 0x0100, 0x0101, 0x0002, 0x0003, 0x0102, 0x0103,
+		0x0200, 0x0201, 0x0300, 0x0301, 0x0202, 0x0203, 0x0302, 0x0303,
+		0x0004, 0x0005, 0x0104, 0x0105, 0x0006, 0x0007, 0x0106, 0x0107,
+		0x0204, 0x0205, 0x0304, 0x0305, 0x0206, 0x0207, 0x0306, 0x0307,
+		0x0400, 0x0401, 0x0500, 0x0501, 0x0402, 0x0403, 0x0502, 0x0503,
+		0x0600, 0x0601, 0x0700, 0x0701, 0x0602, 0x0603, 0x0702, 0x0703,
+		0x0404, 0x0405, 0x0504, 0x0505, 0x0406, 0x0407, 0x0506, 0x0507,
+		0x0604, 0x0605, 0x0704, 0x0705, 0x0606, 0x0607, 0x0706, 0x0707,
+		0x0008, 0x0009, 0x0108, 0x0109, 0x000A, 0x000B, 0x010A, 0x010B,
+		0x0208, 0x0209, 0x0308, 0x0309, 0x020A, 0x020B, 0x030A, 0x030B,
+		0x000C, 0x000D, 0x010C, 0x010D, 0x000E, 0x000F, 0x010E, 0x010F,
+		0x020C, 0x020D, 0x030C, 0x030D, 0x020E, 0x020F, 0x030E, 0x030F,
+		0x0408, 0x0409, 0x0508, 0x0509, 0x040A, 0x040B, 0x050A, 0x050B,
+		0x0608, 0x0609, 0x0708, 0x0709, 0x060A, 0x060B, 0x070A, 0x070B,
+		0x040C, 0x040D, 0x050C, 0x050D, 0x040E, 0x040F, 0x050E, 0x050F,
+		0x060C, 0x060D, 0x070C, 0x070D, 0x060E, 0x060F, 0x070E, 0x070F,
+		0x0800, 0x0801, 0x0900, 0x0901, 0x0802, 0x0803, 0x0902, 0x0903,
+		0x0A00, 0x0A01, 0x0B00, 0x0B01, 0x0A02, 0x0A03, 0x0B02, 0x0B03,
+		0x0804, 0x0805, 0x0904, 0x0905, 0x0806, 0x0807, 0x0906, 0x0907,
+		0x0A04, 0x0A05, 0x0B04, 0x0B05, 0x0A06, 0x0A07, 0x0B06, 0x0B07,
+		0x0C00, 0x0C01, 0x0D00, 0x0D01, 0x0C02, 0x0C03, 0x0D02, 0x0D03,
+		0x0E00, 0x0E01, 0x0F00, 0x0F01, 0x0E02, 0x0E03, 0x0F02, 0x0F03,
+		0x0C04, 0x0C05, 0x0D04, 0x0D05, 0x0C06, 0x0C07, 0x0D06, 0x0D07,
+		0x0E04, 0x0E05, 0x0F04, 0x0F05, 0x0E06, 0x0E07, 0x0F06, 0x0F07,
+		0x0808, 0x0809, 0x0908, 0x0909, 0x080A, 0x080B, 0x090A, 0x090B,
+		0x0A08, 0x0A09, 0x0B08, 0x0B09, 0x0A0A, 0x0A0B, 0x0B0A, 0x0B0B,
+		0x080C, 0x080D, 0x090C, 0x090D, 0x080E, 0x080F, 0x090E, 0x090F,
+		0x0A0C, 0x0A0D, 0x0B0C, 0x0B0D, 0x0A0E, 0x0A0F, 0x0B0E, 0x0B0F,
+		0x0C08, 0x0C09, 0x0D08, 0x0D09, 0x0C0A, 0x0C0B, 0x0D0A, 0x0D0B,
+		0x0E08, 0x0E09, 0x0F08, 0x0F09, 0x0E0A, 0x0E0B, 0x0F0A, 0x0F0B,
+		0x0C0C, 0x0C0D, 0x0D0C, 0x0D0D, 0x0C0E, 0x0C0F, 0x0D0E, 0x0D0F,
+		0x0E0C, 0x0E0D, 0x0F0C, 0x0F0D, 0x0E0E, 0x0E0F, 0x0F0E, 0x0F0F,
+	}
+
+	// Total number of pixels in the HEALPix map:
+	npix := 12 * nside * nside
+
+	// Determine the number of pixels per face:
+	npface := nside * nside
+
+	// Determine the face number and the pixel number within that face:
+	// N.B. Face numbers range from 0 to 11:
+	faceNumber := index / npface
+	pixInFace := index % npface
+
+	// Extract ix using the ctab lookup table:
+	raw1 := (pixInFace & 0x5555) | ((pixInFace & 0x55550000) >> 15)
+	ix := ctab[raw1&0xff] | (ctab[(raw1>>8)&0xff] << 4)
+
+	// Shift pixInFace right by 1 (equivalent to pix >>= 1):
+	pixShifted := pixInFace >> 1
+
+	// Extract iy using the ctab lookup table:
+	raw2 := (pixShifted & 0x5555) | ((pixShifted & 0x55550000) >> 15)
+	iy := ctab[raw2&0xff] | (ctab[(raw2>>8)&0xff] << 4)
+
+	// Calculate the ring number (jr):
+	jr := jrll[faceNumber]*nside - ix - iy - 1
+
+	// Ring number (nr) in the HEALPix projection:
+	var nr int
+
+	// z-coordinate in the HEALPix projection:
+	var z float64
+
+	// Shift based on ring number parity (even or odd):
+	var kshift int
+
+	// Determine the region based on jr and compute z and kshift accordingly:
+	switch {
+	case jr < nside:
+		// North polar cap region:
+		nr = jr
+		z = 1.0 - float64(nr*nr)*(4.0/float64(npix))
+		kshift = 0
+	case jr > 3*nside:
+		// South polar cap region:
+		nr = 4*nside - jr
+		z = float64(nr*nr)*(4.0/float64(npix)) - 1.0
+		kshift = 0
+	default:
+		// Equatorial region:
+		fact1 := float64(2*nside) * (4.0 / float64(npix))
+		nr = nside
+		z = (float64(2*nside - jr)) * fact1
+		// Equivalent to (jr - nside) % 2 for positive integers:
+		kshift = (jr - nside) & 1
+	}
+
+	// Calculate phi index (jp) using the jpll array:
+	jp := (jpll[faceNumber]*nr + ix - iy + 1 + kshift) / 2
+
+	// Wrap jp within [1, 4*nr]:
+	if jp > 4*nside {
+		jp -= 4 * nside
+	}
+	if jp < 1 {
+		jp += 4 * nside
+	}
+
+	// Calculate phi (longitude):
+	phi = (float64(jp) - 0.5*float64(kshift+1)) * ((math.Pi / 2) / float64(nr))
+
+	// Calculate theta (colatitude) using the z-coordinate:
+	theta = math.Acos(z)
+
+	return theta, phi
 }
 
 /*****************************************************************************************************************/
