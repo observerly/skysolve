@@ -133,7 +133,6 @@ func TestHealpixNorthPole(t *testing.T) {
 	// Define a slice of NSide values to test
 	nsides := []int{1, 2, 4, 8}
 
-	// Define expected pixel indices for RING and NESTED schemes based on your JSON data
 	expectedPixelsRING := map[int]int{
 		1: 0,
 		2: 0,
@@ -146,6 +145,25 @@ func TestHealpixNorthPole(t *testing.T) {
 		2: 3,
 		4: 15,
 		8: 63,
+	}
+
+	expectedAngles := map[int]astrometry.ICRSEquatorialCoordinate{
+		1: {
+			RA:  45.0,
+			Dec: 41.81031,
+		},
+		2: {
+			RA:  45.0,
+			Dec: 66.44354,
+		},
+		4: {
+			RA:  45.0,
+			Dec: 78.28415,
+		},
+		8: {
+			RA:  45.0,
+			Dec: 84.14973,
+		},
 	}
 
 	for _, nside := range nsides {
@@ -161,6 +179,18 @@ func TestHealpixNorthPole(t *testing.T) {
 					t.Errorf("RING Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelRing, pixelRing)
 				}
+
+				equatorialRing := hpRing.ConvertPixelIndexToEquatorial(expectedPixelRing)
+
+				expectedAngleRing, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in RING scheme", nside)
+				}
+
+				if math.Abs(equatorialRing.RA-expectedAngleRing.RA) > 1e-6 || math.Abs(equatorialRing.Dec-expectedAngleRing.Dec) > 1e-5 {
+					t.Errorf("RING Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelRing, expectedAngleRing.RA, expectedAngleRing.Dec, equatorialRing.RA, equatorialRing.Dec)
+				}
 			},
 		)
 
@@ -175,6 +205,18 @@ func TestHealpixNorthPole(t *testing.T) {
 				if pixelNested != expectedPixelNested {
 					t.Errorf("NESTED Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelNested, pixelNested)
+				}
+
+				equatorialNested := hpNested.ConvertPixelIndexToEquatorial(expectedPixelNested)
+
+				expectedAngleNested, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in NESTED scheme", nside)
+				}
+
+				if math.Abs(equatorialNested.RA-expectedAngleNested.RA) > 1e-6 || math.Abs(equatorialNested.Dec-expectedAngleNested.Dec) > 1e-5 {
+					t.Errorf("NESTED Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelNested, expectedAngleNested.RA, expectedAngleNested.Dec, equatorialNested.RA, equatorialNested.Dec)
 				}
 			},
 		)
@@ -196,7 +238,6 @@ func TestHealpixRA0Dec0(t *testing.T) {
 	// Define a slice of NSide values to test
 	nsides := []int{1, 2, 4, 8}
 
-	// Define expected pixel indices for RING and NESTED schemes based on your JSON data
 	expectedPixelsRING := map[int]int{
 		1: 4,
 		2: 12,
@@ -209,6 +250,25 @@ func TestHealpixRA0Dec0(t *testing.T) {
 		2: 19,
 		4: 76,
 		8: 304,
+	}
+
+	expectedAngles := map[int]astrometry.ICRSEquatorialCoordinate{
+		1: {
+			RA:  0.0,
+			Dec: 0.0,
+		},
+		2: {
+			RA:  0.0,
+			Dec: 19.47122,
+		},
+		4: {
+			RA:  0.0,
+			Dec: 9.59407,
+		},
+		8: {
+			RA:  0.0,
+			Dec: 4.78019,
+		},
 	}
 
 	for _, nside := range nsides {
@@ -224,6 +284,18 @@ func TestHealpixRA0Dec0(t *testing.T) {
 					t.Errorf("RING Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelRing, pixelRing)
 				}
+
+				equatorialRing := hpRing.ConvertPixelIndexToEquatorial(expectedPixelRing)
+
+				expectedAngleRing, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in RING scheme", nside)
+				}
+
+				if math.Abs(equatorialRing.RA-expectedAngleRing.RA) > 1e-6 || math.Abs(equatorialRing.Dec-expectedAngleRing.Dec) > 1e-5 {
+					t.Errorf("RING Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelRing, expectedAngleRing.RA, expectedAngleRing.Dec, equatorialRing.RA, equatorialRing.Dec)
+				}
 			},
 		)
 
@@ -238,6 +310,18 @@ func TestHealpixRA0Dec0(t *testing.T) {
 				if pixelNested != expectedPixelNested {
 					t.Errorf("NESTED Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelNested, pixelNested)
+				}
+
+				equatorialNested := hpNested.ConvertPixelIndexToEquatorial(expectedPixelNested)
+
+				expectedAngleNested, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in NESTED scheme", nside)
+				}
+
+				if math.Abs(equatorialNested.RA-expectedAngleNested.RA) > 1e-6 || math.Abs(equatorialNested.Dec-expectedAngleNested.Dec) > 1e-5 {
+					t.Errorf("NESTED Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelNested, expectedAngleNested.RA, expectedAngleNested.Dec, equatorialNested.RA, equatorialNested.Dec)
 				}
 			},
 		)
@@ -259,7 +343,6 @@ func TestHealpixRA90Dec0(t *testing.T) {
 	// Define a slice of NSide values to test
 	nsides := []int{1, 2, 4, 8}
 
-	// Define expected pixel indices for RING and NESTED schemes based on your JSON data
 	expectedPixelsRING := map[int]int{
 		1: 5,
 		2: 22,
@@ -272,6 +355,25 @@ func TestHealpixRA90Dec0(t *testing.T) {
 		2: 21,
 		4: 86,
 		8: 346,
+	}
+
+	expectedAngles := map[int]astrometry.ICRSEquatorialCoordinate{
+		1: {
+			RA:  90.0,
+			Dec: 0.0,
+		},
+		2: {
+			RA:  112.5,
+			Dec: 0.0, // Replace with accurate value
+		},
+		4: {
+			RA:  101.25,
+			Dec: 0.0, // Replace with accurate value
+		},
+		8: {
+			RA:  95.625,
+			Dec: 0.0, // Replace with accurate value
+		},
 	}
 
 	for _, nside := range nsides {
@@ -287,6 +389,18 @@ func TestHealpixRA90Dec0(t *testing.T) {
 					t.Errorf("RING Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelRing, pixelRing)
 				}
+
+				equatorialRing := hpRing.ConvertPixelIndexToEquatorial(expectedPixelRing)
+
+				expectedAngleRing, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in RING scheme", nside)
+				}
+
+				if math.Abs(equatorialRing.RA-expectedAngleRing.RA) > 1e-6 || math.Abs(equatorialRing.Dec-expectedAngleRing.Dec) > 1e-5 {
+					t.Errorf("RING Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelRing, expectedAngleRing.RA, expectedAngleRing.Dec, equatorialRing.RA, equatorialRing.Dec)
+				}
 			},
 		)
 
@@ -301,6 +415,18 @@ func TestHealpixRA90Dec0(t *testing.T) {
 				if pixelNested != expectedPixelNested {
 					t.Errorf("NESTED Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelNested, pixelNested)
+				}
+
+				equatorialNested := hpNested.ConvertPixelIndexToEquatorial(expectedPixelNested)
+
+				expectedAngleNested, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in NESTED scheme", nside)
+				}
+
+				if math.Abs(equatorialNested.RA-expectedAngleNested.RA) > 1e-6 || math.Abs(equatorialNested.Dec-expectedAngleNested.Dec) > 1e-5 {
+					t.Errorf("NESTED Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelNested, expectedAngleNested.RA, expectedAngleNested.Dec, equatorialNested.RA, equatorialNested.Dec)
 				}
 			},
 		)
@@ -322,7 +448,6 @@ func TestHealpixRA180Dec0(t *testing.T) {
 	// Define a slice of NSide values to test
 	nsides := []int{1, 2, 4, 8}
 
-	// Define expected pixel indices for RING and NESTED schemes based on your JSON data
 	expectedPixelsRING := map[int]int{
 		1: 6,
 		2: 24,
@@ -335,6 +460,25 @@ func TestHealpixRA180Dec0(t *testing.T) {
 		2: 25,
 		4: 102,
 		8: 410,
+	}
+
+	expectedAngles := map[int]astrometry.ICRSEquatorialCoordinate{
+		1: {
+			RA:  180.0,
+			Dec: 0.0,
+		},
+		2: {
+			RA:  202.5,
+			Dec: 0.0, // Replace with accurate value
+		},
+		4: {
+			RA:  191.25,
+			Dec: 0.0, // Replace with accurate value
+		},
+		8: {
+			RA:  185.625,
+			Dec: 0.0, // Replace with accurate value
+		},
 	}
 
 	for _, nside := range nsides {
@@ -350,6 +494,18 @@ func TestHealpixRA180Dec0(t *testing.T) {
 					t.Errorf("RING Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelRing, pixelRing)
 				}
+
+				equatorialRing := hpRing.ConvertPixelIndexToEquatorial(expectedPixelRing)
+
+				expectedAngleRing, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in RING scheme", nside)
+				}
+
+				if math.Abs(equatorialRing.RA-expectedAngleRing.RA) > 1e-6 || math.Abs(equatorialRing.Dec-expectedAngleRing.Dec) > 1e-5 {
+					t.Errorf("RING Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelRing, expectedAngleRing.RA, expectedAngleRing.Dec, equatorialRing.RA, equatorialRing.Dec)
+				}
 			},
 		)
 
@@ -364,6 +520,18 @@ func TestHealpixRA180Dec0(t *testing.T) {
 				if pixelNested != expectedPixelNested {
 					t.Errorf("NESTED Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelNested, pixelNested)
+				}
+
+				equatorialNested := hpNested.ConvertPixelIndexToEquatorial(expectedPixelNested)
+
+				expectedAngleNested, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in NESTED scheme", nside)
+				}
+
+				if math.Abs(equatorialNested.RA-expectedAngleNested.RA) > 1e-6 || math.Abs(equatorialNested.Dec-expectedAngleNested.Dec) > 1e-5 {
+					t.Errorf("NESTED Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelNested, expectedAngleNested.RA, expectedAngleNested.Dec, equatorialNested.RA, equatorialNested.Dec)
 				}
 			},
 		)
@@ -385,7 +553,6 @@ func TestHealpixRA270Dec0(t *testing.T) {
 	// Define a slice of NSide values to test
 	nsides := []int{1, 2, 4, 8}
 
-	// Define expected pixel indices for RING and NESTED schemes based on your JSON data
 	expectedPixelsRING := map[int]int{
 		1: 7,
 		2: 26,
@@ -398,6 +565,25 @@ func TestHealpixRA270Dec0(t *testing.T) {
 		2: 29,
 		4: 118,
 		8: 474,
+	}
+
+	expectedAngles := map[int]astrometry.ICRSEquatorialCoordinate{
+		1: {
+			RA:  270.0,
+			Dec: 0.0,
+		},
+		2: {
+			RA:  292.5,
+			Dec: 0.0,
+		},
+		4: {
+			RA:  281.25,
+			Dec: 0.0,
+		},
+		8: {
+			RA:  275.625,
+			Dec: 0.0,
+		},
 	}
 
 	for _, nside := range nsides {
@@ -413,6 +599,18 @@ func TestHealpixRA270Dec0(t *testing.T) {
 					t.Errorf("RING Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelRing, pixelRing)
 				}
+
+				equatorialRing := hpRing.ConvertPixelIndexToEquatorial(expectedPixelRing)
+
+				expectedAngleRing, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in RING scheme", nside)
+				}
+
+				if math.Abs(equatorialRing.RA-expectedAngleRing.RA) > 1e-6 || math.Abs(equatorialRing.Dec-expectedAngleRing.Dec) > 1e-5 {
+					t.Errorf("RING Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelRing, expectedAngleRing.RA, expectedAngleRing.Dec, equatorialRing.RA, equatorialRing.Dec)
+				}
 			},
 		)
 
@@ -427,6 +625,18 @@ func TestHealpixRA270Dec0(t *testing.T) {
 				if pixelNested != expectedPixelNested {
 					t.Errorf("NESTED Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelNested, pixelNested)
+				}
+
+				equatorialNested := hpNested.ConvertPixelIndexToEquatorial(expectedPixelNested)
+
+				expectedAngleNested, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in NESTED scheme", nside)
+				}
+
+				if math.Abs(equatorialNested.RA-expectedAngleNested.RA) > 1e-6 || math.Abs(equatorialNested.Dec-expectedAngleNested.Dec) > 1e-5 {
+					t.Errorf("NESTED Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelNested, expectedAngleNested.RA, expectedAngleNested.Dec, equatorialNested.RA, equatorialNested.Dec)
 				}
 			},
 		)
@@ -448,7 +658,6 @@ func TestHealpixRA45Dec45(t *testing.T) {
 	// Define a slice of NSide values to test
 	nsides := []int{1, 2, 4, 8}
 
-	// Define expected pixel indices for RING and NESTED schemes based on your JSON data
 	expectedPixelsRING := map[int]int{
 		1: 0,
 		2: 0,
@@ -461,6 +670,25 @@ func TestHealpixRA45Dec45(t *testing.T) {
 		2: 3,
 		4: 12,
 		8: 48,
+	}
+
+	expectedAngles := map[int]astrometry.ICRSEquatorialCoordinate{
+		1: {
+			RA:  45.0,
+			Dec: 41.81031,
+		},
+		2: {
+			RA:  45.0,
+			Dec: 66.44354,
+		},
+		4: {
+			RA:  45.0,
+			Dec: 54.34091,
+		},
+		8: {
+			RA:  45.0,
+			Dec: 48.14121,
+		},
 	}
 
 	for _, nside := range nsides {
@@ -476,6 +704,18 @@ func TestHealpixRA45Dec45(t *testing.T) {
 					t.Errorf("RING Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelRing, pixelRing)
 				}
+
+				equatorialRing := hpRing.ConvertPixelIndexToEquatorial(expectedPixelRing)
+
+				expectedAngleRing, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in RING scheme", nside)
+				}
+
+				if math.Abs(equatorialRing.RA-expectedAngleRing.RA) > 1e-6 || math.Abs(equatorialRing.Dec-expectedAngleRing.Dec) > 1e-5 {
+					t.Errorf("RING Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelRing, expectedAngleRing.RA, expectedAngleRing.Dec, equatorialRing.RA, equatorialRing.Dec)
+				}
 			},
 		)
 
@@ -490,6 +730,18 @@ func TestHealpixRA45Dec45(t *testing.T) {
 				if pixelNested != expectedPixelNested {
 					t.Errorf("NESTED Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelNested, pixelNested)
+				}
+
+				equatorialNested := hpNested.ConvertPixelIndexToEquatorial(expectedPixelNested)
+
+				expectedAngleNested, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in NESTED scheme", nside)
+				}
+
+				if math.Abs(equatorialNested.RA-expectedAngleNested.RA) > 1e-6 || math.Abs(equatorialNested.Dec-expectedAngleNested.Dec) > 1e-5 {
+					t.Errorf("NESTED Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelNested, expectedAngleNested.RA, expectedAngleNested.Dec, equatorialNested.RA, equatorialNested.Dec)
 				}
 			},
 		)
@@ -511,7 +763,6 @@ func TestHealpixRA135Dec45(t *testing.T) {
 	// Define a slice of NSide values to test
 	nsides := []int{1, 2, 4, 8}
 
-	// Define expected pixel indices for RING and NESTED schemes based on your JSON data
 	expectedPixelsRING := map[int]int{
 		1: 1,
 		2: 1,
@@ -524,6 +775,25 @@ func TestHealpixRA135Dec45(t *testing.T) {
 		2: 7,
 		4: 28,
 		8: 112,
+	}
+
+	expectedAngles := map[int]astrometry.ICRSEquatorialCoordinate{
+		1: {
+			RA:  135.0,
+			Dec: 41.81031,
+		},
+		2: {
+			RA:  135.0,
+			Dec: 66.44354,
+		},
+		4: {
+			RA:  135.0,
+			Dec: 54.34091,
+		},
+		8: {
+			RA:  135.0,
+			Dec: 48.14121,
+		},
 	}
 
 	for _, nside := range nsides {
@@ -539,6 +809,18 @@ func TestHealpixRA135Dec45(t *testing.T) {
 					t.Errorf("RING Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelRing, pixelRing)
 				}
+
+				equatorialRing := hpRing.ConvertPixelIndexToEquatorial(expectedPixelRing)
+
+				expectedAngleRing, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in RING scheme", nside)
+				}
+
+				if math.Abs(equatorialRing.RA-expectedAngleRing.RA) > 1e-6 || math.Abs(equatorialRing.Dec-expectedAngleRing.Dec) > 1e-5 {
+					t.Errorf("RING Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelRing, expectedAngleRing.RA, expectedAngleRing.Dec, equatorialRing.RA, equatorialRing.Dec)
+				}
 			},
 		)
 
@@ -553,6 +835,18 @@ func TestHealpixRA135Dec45(t *testing.T) {
 				if pixelNested != expectedPixelNested {
 					t.Errorf("NESTED Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelNested, pixelNested)
+				}
+
+				equatorialNested := hpNested.ConvertPixelIndexToEquatorial(expectedPixelNested)
+
+				expectedAngleNested, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in NESTED scheme", nside)
+				}
+
+				if math.Abs(equatorialNested.RA-expectedAngleNested.RA) > 1e-6 || math.Abs(equatorialNested.Dec-expectedAngleNested.Dec) > 1e-5 {
+					t.Errorf("NESTED Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelNested, expectedAngleNested.RA, expectedAngleNested.Dec, equatorialNested.RA, equatorialNested.Dec)
 				}
 			},
 		)
@@ -574,7 +868,6 @@ func TestHealpixRA225DecNeg45(t *testing.T) {
 	// Define a slice of NSide values to test
 	nsides := []int{1, 2, 4, 8}
 
-	// Define expected pixel indices for RING and NESTED schemes based on your JSON data
 	expectedPixelsRING := map[int]int{
 		1: 10,
 		2: 46,
@@ -587,6 +880,25 @@ func TestHealpixRA225DecNeg45(t *testing.T) {
 		2: 40,
 		4: 163,
 		8: 655,
+	}
+
+	expectedAngles := map[int]astrometry.ICRSEquatorialCoordinate{
+		1: {
+			RA:  225.0,
+			Dec: -41.81031,
+		},
+		2: {
+			RA:  225.0,
+			Dec: -66.44354,
+		},
+		4: {
+			RA:  225.0,
+			Dec: -54.34091,
+		},
+		8: {
+			RA:  225.0,
+			Dec: -48.14121,
+		},
 	}
 
 	for _, nside := range nsides {
@@ -602,6 +914,18 @@ func TestHealpixRA225DecNeg45(t *testing.T) {
 					t.Errorf("RING Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelRing, pixelRing)
 				}
+
+				equatorialRing := hpRing.ConvertPixelIndexToEquatorial(expectedPixelRing)
+
+				expectedAngleRing, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in RING scheme", nside)
+				}
+
+				if math.Abs(equatorialRing.RA-expectedAngleRing.RA) > 1e-6 || math.Abs(equatorialRing.Dec-expectedAngleRing.Dec) > 1e-5 {
+					t.Errorf("RING Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelRing, expectedAngleRing.RA, expectedAngleRing.Dec, equatorialRing.RA, equatorialRing.Dec)
+				}
 			},
 		)
 
@@ -616,6 +940,18 @@ func TestHealpixRA225DecNeg45(t *testing.T) {
 				if pixelNested != expectedPixelNested {
 					t.Errorf("NESTED Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelNested, pixelNested)
+				}
+
+				equatorialNested := hpNested.ConvertPixelIndexToEquatorial(expectedPixelNested)
+
+				expectedAngleNested, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in NESTED scheme", nside)
+				}
+
+				if math.Abs(equatorialNested.RA-expectedAngleNested.RA) > 1e-6 || math.Abs(equatorialNested.Dec-expectedAngleNested.Dec) > 1e-5 {
+					t.Errorf("NESTED Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelNested, expectedAngleNested.RA, expectedAngleNested.Dec, equatorialNested.RA, equatorialNested.Dec)
 				}
 			},
 		)
@@ -637,7 +973,6 @@ func TestHealpixRA315DecNeg45(t *testing.T) {
 	// Define a slice of NSide values to test
 	nsides := []int{1, 2, 4, 8}
 
-	// Define expected pixel indices for RING and NESTED schemes based on your JSON data
 	expectedPixelsRING := map[int]int{
 		1: 11,
 		2: 47,
@@ -650,6 +985,25 @@ func TestHealpixRA315DecNeg45(t *testing.T) {
 		2: 44,
 		4: 179,
 		8: 719,
+	}
+
+	expectedAngles := map[int]astrometry.ICRSEquatorialCoordinate{
+		1: {
+			RA:  315.0,
+			Dec: -41.81031,
+		},
+		2: {
+			RA:  315.0,
+			Dec: -66.44354,
+		},
+		4: {
+			RA:  315.0,
+			Dec: -54.34091,
+		},
+		8: {
+			RA:  315.0,
+			Dec: -48.14121,
+		},
 	}
 
 	for _, nside := range nsides {
@@ -665,6 +1019,18 @@ func TestHealpixRA315DecNeg45(t *testing.T) {
 					t.Errorf("RING Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelRing, pixelRing)
 				}
+
+				equatorialRing := hpRing.ConvertPixelIndexToEquatorial(expectedPixelRing)
+
+				expectedAngleRing, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in RING scheme", nside)
+				}
+
+				if math.Abs(equatorialRing.RA-expectedAngleRing.RA) > 1e-6 || math.Abs(equatorialRing.Dec-expectedAngleRing.Dec) > 1e-5 {
+					t.Errorf("RING Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelRing, expectedAngleRing.RA, expectedAngleRing.Dec, equatorialRing.RA, equatorialRing.Dec)
+				}
 			},
 		)
 
@@ -679,6 +1045,18 @@ func TestHealpixRA315DecNeg45(t *testing.T) {
 				if pixelNested != expectedPixelNested {
 					t.Errorf("NESTED Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelNested, pixelNested)
+				}
+
+				equatorialNested := hpNested.ConvertPixelIndexToEquatorial(expectedPixelNested)
+
+				expectedAngleNested, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in NESTED scheme", nside)
+				}
+
+				if math.Abs(equatorialNested.RA-expectedAngleNested.RA) > 1e-6 || math.Abs(equatorialNested.Dec-expectedAngleNested.Dec) > 1e-5 {
+					t.Errorf("NESTED Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelNested, expectedAngleNested.RA, expectedAngleNested.Dec, equatorialNested.RA, equatorialNested.Dec)
 				}
 			},
 		)
@@ -700,7 +1078,6 @@ func TestHealpixSouthPole(t *testing.T) {
 	// Define a slice of NSide values to test
 	nsides := []int{1, 2, 4, 8}
 
-	// Define expected pixel indices for RING and NESTED schemes based on your JSON data
 	expectedPixelsRING := map[int]int{
 		1: 8,
 		2: 44,
@@ -713,6 +1090,25 @@ func TestHealpixSouthPole(t *testing.T) {
 		2: 32,
 		4: 128,
 		8: 512,
+	}
+
+	expectedAngles := map[int]astrometry.ICRSEquatorialCoordinate{
+		1: {
+			RA:  45.0,
+			Dec: -41.81031,
+		},
+		2: {
+			RA:  45.0,
+			Dec: -66.44354,
+		},
+		4: {
+			RA:  45.0,
+			Dec: -78.28415,
+		},
+		8: {
+			RA:  45.0,
+			Dec: -84.14973,
+		},
 	}
 
 	for _, nside := range nsides {
@@ -728,6 +1124,18 @@ func TestHealpixSouthPole(t *testing.T) {
 					t.Errorf("RING Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelRing, pixelRing)
 				}
+
+				equatorialRing := hpRing.ConvertPixelIndexToEquatorial(expectedPixelRing)
+
+				expectedAngleRing, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in RING scheme", nside)
+				}
+
+				if math.Abs(equatorialRing.RA-expectedAngleRing.RA) > 1e-6 || math.Abs(equatorialRing.Dec-expectedAngleRing.Dec) > 1e-5 {
+					t.Errorf("RING Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelRing, expectedAngleRing.RA, expectedAngleRing.Dec, equatorialRing.RA, equatorialRing.Dec)
+				}
 			},
 		)
 
@@ -742,6 +1150,18 @@ func TestHealpixSouthPole(t *testing.T) {
 				if pixelNested != expectedPixelNested {
 					t.Errorf("NESTED Scheme: NSide=%d, RA=%.1f°, Dec=%.1f° => Expected Pixel=%d, Got Pixel=%d",
 						nside, ra, dec, expectedPixelNested, pixelNested)
+				}
+
+				equatorialNested := hpNested.ConvertPixelIndexToEquatorial(expectedPixelNested)
+
+				expectedAngleNested, exists := expectedAngles[nside]
+				if !exists {
+					t.Fatalf("Expected angles not defined for NSide=%d in NESTED scheme", nside)
+				}
+
+				if math.Abs(equatorialNested.RA-expectedAngleNested.RA) > 1e-6 || math.Abs(equatorialNested.Dec-expectedAngleNested.Dec) > 1e-5 {
+					t.Errorf("NESTED Scheme: NSide=%d, Pixel=%d => Expected RA=%.5f°, Dec=%.5f°, Got RA=%.5f°, Dec=%.5f°",
+						nside, expectedPixelNested, expectedAngleNested.RA, expectedAngleNested.Dec, equatorialNested.RA, equatorialNested.Dec)
 				}
 			},
 		)
