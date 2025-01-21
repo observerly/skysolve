@@ -273,11 +273,11 @@ func TestEquatorialCoordinateToPixelAtImageCenter(t *testing.T) {
 
 	tolerance := 0.0000001
 
-	if math.Abs((x - 0)) > tolerance {
+	if math.Abs((x - 1024)) > tolerance {
 		t.Errorf("X not calculated correctly")
 	}
 
-	if math.Abs(y-0) > tolerance {
+	if math.Abs(y-1024) > tolerance {
 		t.Errorf("Y not calculated correctly")
 	}
 }
@@ -382,11 +382,11 @@ func TestEquatorialCoordinateToPixelWithSIPDistortionAtImageCenter(t *testing.T)
 
 	tolerance := 0.0000001
 
-	if math.Abs((x)) > tolerance {
+	if math.Abs((x - 1024)) > tolerance {
 		t.Errorf("X not calculated correctly")
 	}
 
-	if math.Abs(y) > tolerance {
+	if math.Abs((y - 1024)) > tolerance {
 		t.Errorf("Y not calculated correctly")
 	}
 }
@@ -462,11 +462,11 @@ func TestEquatorialCoordinateToPixelWithSIPDistortion(t *testing.T) {
 
 	tolerance := 0.001
 
-	if math.Abs((x + 24)) > tolerance {
+	if math.Abs((x - 1000)) > tolerance {
 		t.Errorf("X not calculated correctly")
 	}
 
-	if math.Abs(y+24) > tolerance {
+	if math.Abs(y-1000) > tolerance {
 		t.Errorf("Y not calculated correctly")
 	}
 }
