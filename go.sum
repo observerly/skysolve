@@ -1,5 +1,7 @@
 github.com/observerly/iris v0.41.0 h1:2578R93bDQRwwYS7jVxdEkPrM3QUthMyXgTeXkXXtjY=
 github.com/observerly/iris v0.41.0/go.mod h1:umxMm/MDEsIivLF71qnhi3PCMt6NwSlusCb2u8Xx8DQ=
+github.com/observerly/sidera v0.7.0 h1:DvR+CXMfLSvdHeuJ+0OgGqew/d9hNucTd/heF+ebFkw=
+github.com/observerly/sidera v0.7.0/go.mod h1:3TAkxsMaa1YigJTodu3/OCqnr0BgHTQZ13Lcgmfc0r0=
 golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f h1:XdNn9LlyWAhLVp6P/i8QYBW+hlyhrhei9uErw2B5GJo=
 golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f/go.mod h1:D5SMRVC3C2/4+F/DB1wZsLRnSNimn2Sp/NPsCrsv8ak=
 gonum.org/v1/gonum v0.15.1 h1:FNy7N6OUZVUaWG9pTiD+jlhdQ3lMP+/LcTpJ6+a8sQ0=
