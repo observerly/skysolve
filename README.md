@@ -42,7 +42,7 @@ Corrects for optical distortions and projection effects, ensuring accurate repre
 WCS Compliant: Generates World Coordinate System (WCS) solutions that adhere to the FITS standard, ensuring compatibility with existing astronomical software and tools.
 
 
-#### Usage
+### Usage
 
 SkySolve is designed to interoperate between IRIS, a FITs image processing library [observerly/iris](), and the GAIA DR3 catalog. The following example demonstrates how to use SkySolve to plate solve an astronomical image:
 
@@ -147,6 +147,12 @@ func main() {
 	}
 }
 ```
+
+### Examples
+
+Examples can be found in the [./examples](./examples) directory:
+
+- [Generated GAIA Sky](./examples/sky/main.go) - Generates a sky map of the GAIA DR2 & DR3 catalog, and returns a ZScale normalized image of the sky for your chosen parameters.
 
 ### Algorithm & Methodology
 

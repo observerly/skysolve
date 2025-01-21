@@ -4,6 +4,7 @@ go 1.23.2
 
 require (
 	github.com/observerly/iris v0.41.0
+	github.com/observerly/sidera v0.7.0
 	gonum.org/v1/gonum v0.15.1
 )
 
