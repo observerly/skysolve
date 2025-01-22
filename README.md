@@ -152,6 +152,7 @@ func main() {
 
 Examples can be found in the [./examples](./examples) directory:
 
+- [Astrometric Plate Solver](./examples/solve/main.go) - Plate solves a FITs image using the SkySolve library.
 - [Generated GAIA Sky](./examples/sky/main.go) - Generates a sky map of the GAIA DR2 & DR3 catalog, and returns a ZScale normalized image of the sky for your chosen parameters.
 
 ### Algorithm & Methodology
