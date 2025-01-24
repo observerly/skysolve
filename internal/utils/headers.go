@@ -47,3 +47,32 @@ func ResolveOrExtractRAFromHeaders(value float32, header fits.FITSHeader) (float
 }
 
 /*****************************************************************************************************************/
+
+func ResolveOrExtractDecFromHeaders(value float32, header fits.FITSHeader) (float32, error) {
+	// First, pick a candidate Dec (v):
+	v := value
+
+	// If the candidate Dec (v) is NaN, try to get it from the header:
+	if math.IsNaN(float64(v)) {
+		dec, exists := header.Floats["DEC"]
+		if !exists {
+			return float32(math.NaN()), fmt.Errorf("dec header not found in the supplied FITS file")
+		}
+		v = dec.Value
+	}
+
+	// Validate the candidate Dec (v) is a valid float32:
+	if math.IsNaN(float64(v)) {
+		return float32(math.NaN()), fmt.Errorf("dec value needs to be a valid float32")
+	}
+
+	// Validate the candidate Dec (v) is within the range [-90, 90]:
+	if v < -90 || v > 90 {
+		return float32(math.NaN()), fmt.Errorf("dec value is out of range: %f", v)
+	}
+
+	// Return the candidate Dec (v):
+	return v, nil
+}
+
+/*****************************************************************************************************************/
