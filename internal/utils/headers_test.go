@@ -32,11 +32,32 @@ func newFITSHeaderWithRA(ra float32) fits.FITSHeader {
 	}
 }
 
+// newFITSHeaderWithDec is a helper that returns a fits.FITSHeader
+// populated with an Dec value.
+func newFITSHeaderWithDec(dec float32) fits.FITSHeader {
+	return fits.FITSHeader{
+		Floats: map[string]fits.FITSHeaderFloat{
+			"DEC": {
+				Value:   dec,
+				Comment: "Right Ascension",
+			},
+		},
+	}
+}
+
 /*****************************************************************************************************************/
 
 // newFITSHeaderNoRA is a helper that returns a fits.FITSHeader
 // with no RA entry in the Floats map.
 func newFITSHeaderNoRA() fits.FITSHeader {
+	return fits.FITSHeader{
+		Floats: map[string]fits.FITSHeaderFloat{},
+	}
+}
+
+// newFITSHeaderNoDec is a helper that returns a fits.FITSHeader
+// with no Dec entry in the Floats map.
+func newFITSHeaderNoDec() fits.FITSHeader {
 	return fits.FITSHeader{
 		Floats: map[string]fits.FITSHeaderFloat{},
 	}
@@ -146,6 +167,113 @@ func TestRAValueIsNaNAndRAHeaderNaN(t *testing.T) {
 	}
 	if !math.IsNaN(float64(got)) {
 		t.Errorf("Expected NaN when RA=NaN in header, got %f", got)
+	}
+}
+
+/*****************************************************************************************************************/
+
+func TestDecValueIsNotNaNAndWithinRange(t *testing.T) {
+	value := float32(45.0) // well within -90..+90
+	header := newFITSHeaderNoDec()
+
+	got, err := ResolveOrExtractDecFromHeaders(value, header)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if got != value {
+		t.Errorf("Expected %f, got %f", value, got)
+	}
+}
+
+func TestDecValueIsNotNaNAndOutOfRangeNegative(t *testing.T) {
+	value := float32(-91.0)
+	header := newFITSHeaderNoDec()
+
+	got, err := ResolveOrExtractDecFromHeaders(value, header)
+	if err == nil {
+		t.Fatalf("Expected an error for Dec < -90, but got none")
+	}
+	if !math.IsNaN(float64(got)) {
+		t.Errorf("Expected NaN for out-of-range Dec, got %f", got)
+	}
+}
+
+func TestDecValueIsNotNaNAndOutOfRangePositive(t *testing.T) {
+	value := float32(91.0)
+	header := newFITSHeaderNoDec()
+
+	got, err := ResolveOrExtractDecFromHeaders(value, header)
+	if err == nil {
+		t.Fatalf("Expected an error for Dec > +90, but got none")
+	}
+	if !math.IsNaN(float64(got)) {
+		t.Errorf("Expected NaN for out-of-range Dec, got %f", got)
+	}
+}
+
+func TestDecValueIsNaNAndDecHeaderFoundAndValid(t *testing.T) {
+	value := float32(math.NaN())
+	header := newFITSHeaderWithDec(30.0) // valid Dec
+
+	got, err := ResolveOrExtractDecFromHeaders(value, header)
+	if err != nil {
+		t.Fatalf("Unexpected error when Dec is pulled from header: %v", err)
+	}
+	expected := float32(30.0)
+	if got != expected {
+		t.Errorf("Expected Dec = %f, got %f", expected, got)
+	}
+}
+
+func TestDecValueIsNaNAndDecHeaderMissing(t *testing.T) {
+	value := float32(math.NaN())
+	header := newFITSHeaderNoDec()
+
+	got, err := ResolveOrExtractDecFromHeaders(value, header)
+	if err == nil {
+		t.Fatalf("Expected an error when Dec header is missing, but got none")
+	}
+	if !math.IsNaN(float64(got)) {
+		t.Errorf("Expected NaN when Dec header is missing, got %f", got)
+	}
+}
+
+func TestDecValueIsNaNAndDecHeaderOutOfRangeNegative(t *testing.T) {
+	value := float32(math.NaN())
+	header := newFITSHeaderWithDec(-95.0)
+
+	got, err := ResolveOrExtractDecFromHeaders(value, header)
+	if err == nil {
+		t.Fatalf("Expected an error for Dec < -90, but got none")
+	}
+	if !math.IsNaN(float64(got)) {
+		t.Errorf("Expected NaN for out-of-range Dec, got %f", got)
+	}
+}
+
+func TestDecValueIsNaNAndDecHeaderOutOfRangePositive(t *testing.T) {
+	value := float32(math.NaN())
+	header := newFITSHeaderWithDec(100.0)
+
+	got, err := ResolveOrExtractDecFromHeaders(value, header)
+	if err == nil {
+		t.Fatalf("Expected an error for Dec > +90, but got none")
+	}
+	if !math.IsNaN(float64(got)) {
+		t.Errorf("Expected NaN for out-of-range Dec, got %f", got)
+	}
+}
+
+func TestDecValueIsNaNAndDecHeaderNaN(t *testing.T) {
+	value := float32(math.NaN())
+	header := newFITSHeaderWithDec(float32(math.NaN()))
+
+	got, err := ResolveOrExtractDecFromHeaders(value, header)
+	if err == nil {
+		t.Fatalf("Expected an error for Dec=NaN in header, but got none")
+	}
+	if !math.IsNaN(float64(got)) {
+		t.Errorf("Expected NaN when Dec=NaN in header, got %f", got)
 	}
 }
 
