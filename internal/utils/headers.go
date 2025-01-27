@@ -94,3 +94,21 @@ func ExtractImageWidthFromHeaders(header fits.FITSHeader) (int32, error) {
 }
 
 /*****************************************************************************************************************/
+
+func ExtractImageHeightFromHeaders(header fits.FITSHeader) (int32, error) {
+	// Attempt to get the height header from the FITS file:
+	height, exists := header.Ints["NAXIS2"]
+	if !exists {
+		return -1, fmt.Errorf("height header not found in the supplied FITS file")
+	}
+
+	// Validate the height is within the range [0, ∞):
+	if height.Value <= 0 || height.Value == math.MaxInt32 {
+		return -1, fmt.Errorf("height value is out of range: %v", height.Value)
+	}
+
+	// Return the height:
+	return height.Value, nil
+}
+
+/*****************************************************************************************************************/
