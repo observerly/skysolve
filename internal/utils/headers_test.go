@@ -278,3 +278,78 @@ func TestDecValueIsNaNAndDecHeaderNaN(t *testing.T) {
 }
 
 /*****************************************************************************************************************/
+
+func TestWidthIsPresentAndValid(t *testing.T) {
+	header := fits.FITSHeader{
+		Ints: map[string]fits.FITSHeaderInt{
+			"NAXIS1": {
+				Value:   1024,
+				Comment: "Width of the image",
+			},
+		},
+	}
+
+	got, err := ExtractImageWidthFromHeaders(header)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	expected := int32(1024)
+	if got != expected {
+		t.Errorf("Expected %d, got %d", expected, got)
+	}
+}
+
+func TestWidthIsMissingFromHeader(t *testing.T) {
+	header := fits.FITSHeader{
+		Ints: map[string]fits.FITSHeaderInt{},
+	}
+
+	got, err := ExtractImageWidthFromHeaders(header)
+	if err == nil {
+		t.Fatalf("Expected an error for missing width, but got none")
+	}
+	if got != -1 {
+		t.Errorf("Expected -1 for missing width, got %d", got)
+	}
+}
+
+func TestWidthIsOutOfRangeZeroOrNegative(t *testing.T) {
+	header := fits.FITSHeader{
+		Ints: map[string]fits.FITSHeaderInt{
+			"NAXIS1": {
+				Value:   -100,
+				Comment: "Width of the image",
+			},
+		},
+	}
+
+	got, err := ExtractImageWidthFromHeaders(header)
+	if err == nil {
+		t.Fatalf("Expected an error for width <= 0, but got none")
+	}
+	if got != -1 {
+		t.Errorf("Expected -1 for invalid width, got %d", got)
+	}
+}
+
+func TestWidthIsOutOfRangeMaxInt32(t *testing.T) {
+	header := fits.FITSHeader{
+		Ints: map[string]fits.FITSHeaderInt{
+			"NAXIS1": {
+				Value:   math.MaxInt32,
+				Comment: "Width of the image",
+			},
+		},
+	}
+
+	got, err := ExtractImageWidthFromHeaders(header)
+	if err == nil {
+		t.Fatalf("Expected an error for width == math.MaxInt32, but got none")
+	}
+	if got != -1 {
+		t.Errorf("Expected -1 for invalid width, got %d", got)
+	}
+}
+
+/*****************************************************************************************************************/

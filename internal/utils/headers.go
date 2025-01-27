@@ -76,3 +76,21 @@ func ResolveOrExtractDecFromHeaders(value float32, header fits.FITSHeader) (floa
 }
 
 /*****************************************************************************************************************/
+
+func ExtractImageWidthFromHeaders(header fits.FITSHeader) (int32, error) {
+	// Attempt to get the width header from the FITS file:
+	width, exists := header.Ints["NAXIS1"]
+	if !exists {
+		return -1, fmt.Errorf("width header not found in the supplied FITS file")
+	}
+
+	// Validate the width is within the range [0, ∞):
+	if width.Value <= 0 || width.Value == math.MaxInt32 {
+		return -1, fmt.Errorf("width value is out of range: %v", width.Value)
+	}
+
+	// Return the width:
+	return width.Value, nil
+}
+
+/*****************************************************************************************************************/
