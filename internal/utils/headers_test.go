@@ -353,3 +353,78 @@ func TestWidthIsOutOfRangeMaxInt32(t *testing.T) {
 }
 
 /*****************************************************************************************************************/
+
+func TestHeightIsPresentAndValid(t *testing.T) {
+	header := fits.FITSHeader{
+		Ints: map[string]fits.FITSHeaderInt{
+			"NAXIS2": {
+				Value:   1024,
+				Comment: "Height of the image",
+			},
+		},
+	}
+
+	got, err := ExtractImageHeightFromHeaders(header)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	expected := int32(1024)
+	if got != expected {
+		t.Errorf("Expected %d, got %d", expected, got)
+	}
+}
+
+func TestHeightIsMissingFromHeader(t *testing.T) {
+	header := fits.FITSHeader{
+		Ints: map[string]fits.FITSHeaderInt{},
+	}
+
+	got, err := ExtractImageHeightFromHeaders(header)
+	if err == nil {
+		t.Fatalf("Expected an error for missing height, but got none")
+	}
+	if got != -1 {
+		t.Errorf("Expected -1 for missing height, got %d", got)
+	}
+}
+
+func TestHeightIsOutOfRangeZeroOrNegative(t *testing.T) {
+	header := fits.FITSHeader{
+		Ints: map[string]fits.FITSHeaderInt{
+			"NAXIS2": {
+				Value:   -100,
+				Comment: "Height of the image",
+			},
+		},
+	}
+
+	got, err := ExtractImageHeightFromHeaders(header)
+	if err == nil {
+		t.Fatalf("Expected an error for height <= 0, but got none")
+	}
+	if got != -1 {
+		t.Errorf("Expected -1 for invalid height, got %d", got)
+	}
+}
+
+func TestHeightIsOutOfRangeMaxInt32(t *testing.T) {
+	header := fits.FITSHeader{
+		Ints: map[string]fits.FITSHeaderInt{
+			"NAXIS2": {
+				Value:   math.MaxInt32,
+				Comment: "Height of the image",
+			},
+		},
+	}
+
+	got, err := ExtractImageHeightFromHeaders(header)
+	if err == nil {
+		t.Fatalf("Expected an error for height == math.MaxInt32, but got none")
+	}
+	if got != -1 {
+		t.Errorf("Expected -1 for invalid height, got %d", got)
+	}
+}
+
+/*****************************************************************************************************************/
