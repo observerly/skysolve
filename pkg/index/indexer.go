@@ -23,3 +23,15 @@ type Indexer struct {
 }
 
 /*****************************************************************************************************************/
+
+func NewIndexer(
+	healpix healpix.HealPIX,
+	catalog catalog.CatalogService,
+) *Indexer {
+	return &Indexer{
+		Catalog: catalog,
+		HealPIX: healpix,
+	}
+}
+
+/*****************************************************************************************************************/
