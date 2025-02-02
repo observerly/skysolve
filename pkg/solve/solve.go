@@ -11,6 +11,7 @@ package solve
 /*****************************************************************************************************************/
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/observerly/iris/pkg/photometry"
 	stats "github.com/observerly/iris/pkg/statistics"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/observerly/skysolve/pkg/catalog"
 	"github.com/observerly/skysolve/pkg/geometry"
@@ -278,83 +280,105 @@ func (ps *PlateSolver) ValidateAndConfirmMatches(candidateMatches []spatial.Quad
 		return []spatial.QuadMatch{}, errors.New("no candidate matches provided")
 	}
 
+	var mu sync.Mutex
+
 	matches := []spatial.QuadMatch{}
 	maximumConfirmations := 0
 
-	// Create a wait group to wait for all goroutines to finish:
-	wg := sync.WaitGroup{}
+	// Precompute hash codes for all candidate matches:
+	hashes := make([]string, len(candidateMatches))
+	for i, match := range candidateMatches {
+		hashes[i] = match.Quad.GetHashCodeAsString()
+	}
 
-	// Add the number of candidate matches to the wait group:
-	wg.Add(len(candidateMatches))
+	// Use errgroup to run each candidate concurrently and collect the results:
+	g, _ := errgroup.WithContext(context.Background())
 
-	for _, match := range candidateMatches {
-		// Initialize a slice to hold confirming matches for the current quad:
-		var confirmingMatches []spatial.QuadMatch
-
-		// Assuming ComputeAffineTransformation expects a slice of spatial.QuadMatch and uses the Quad points within
-		// the spatial.QuadMatch to compute the affine transformation matrix:
-		params, xr, yr, err := wcs.ComputeAffineTransformation([]spatial.QuadMatch{match})
-		if err != nil {
-			return nil, err
-		}
-
-		// Create a new WCS object with the affine transformation matrix:
-		WCS := wcs.NewWorldCoordinateSystem(
-			xr,
-			yr,
-			wcs.WCSParams{
-				Projection:   wcs.RADEC_TAN,
-				AffineParams: params,
-			},
-		)
-
-		// Ensure the affine transformation is invertible by checking the determinant of the matrix:
-		determinant := params.A*params.E - params.B*params.D
-		if determinant == 0 {
-			fmt.Println("affine transformation is not invertible for match:", match.Quad.GetHashCodeAsString())
-			continue // Skip this match as it cannot be inverted for WCS
-		}
+	for i, match := range candidateMatches {
+		// Create a local copy for the goroutine closure:
+		match := match
+		// Extract the hash for this candidate match:
+		hash := hashes[i]
 
 		// Now for all other candidate matches, apply the affine transformation and validate the match:
-		for _, candidate := range candidateMatches {
-			// Check that the candidate is not the same as the current match:
-			if candidate.Quad.GetHashCodeAsString() == match.Quad.GetHashCodeAsString() {
-				continue
+		g.Go(func() error {
+			// Assuming ComputeAffineTransformation expects a slice of spatial.QuadMatch and uses the Quad points within
+			// the spatial.QuadMatch to compute the affine transformation matrix:
+			params, xr, yr, err := wcs.ComputeAffineTransformation([]spatial.QuadMatch{match})
+			if err != nil {
+				return err
 			}
 
-			// Original pixel coordinates of the candidate's quad points (A, B, C, D):
-			aX, aY := candidate.Quad.A.X, candidate.Quad.A.Y
-			// Apply the inverse affine transformation to get transformed pixel coordinates of the candidate's quad points:
-			xa, ya := WCS.EquatorialCoordinateToPixel(candidate.Quad.A.RA, candidate.Quad.A.Dec)
-
-			bX, bY := candidate.Quad.B.X, candidate.Quad.B.Y
-			xb, yb := WCS.EquatorialCoordinateToPixel(candidate.Quad.B.RA, candidate.Quad.B.Dec)
-
-			cX, cY := candidate.Quad.C.X, candidate.Quad.C.Y
-			xc, yc := WCS.EquatorialCoordinateToPixel(candidate.Quad.C.RA, candidate.Quad.C.Dec)
-
-			dX, dY := candidate.Quad.D.X, candidate.Quad.D.Y
-			xd, yd := WCS.EquatorialCoordinateToPixel(candidate.Quad.D.RA, candidate.Quad.D.Dec)
-
-			// Calculate the Euclidean distance between the two sets of points:
-			distA := math.Hypot(aX-xa, aY-ya)
-			distB := math.Hypot(bX-xb, bY-yb)
-			distC := math.Hypot(cX-xc, cY-yc)
-			distD := math.Hypot(dX-xd, dY-yd)
-
-			// If the distance between the two sets of points is within the specified tolerance, then we have a match:
-			if distA <= tolerance && distB <= tolerance && distC <= tolerance && distD <= tolerance {
-				confirmingMatches = append(confirmingMatches, candidate)
+			// Ensure the affine transformation is invertible by checking the determinant of the matrix:
+			determinant := params.A*params.E - params.B*params.D
+			if determinant == 0 {
+				fmt.Println("affine transformation is not invertible for match:", hash)
+				return nil // Skip this match as it cannot be inverted for WCS
 			}
-		}
 
-		// Update the matches slice with the confirmed matches if they have the most confirmations
-		if len(confirmingMatches) > maximumConfirmations {
-			maximumConfirmations = len(confirmingMatches)
-			// Update the matches slice with the confirmed matches, including the original match
-			matches = append([]spatial.QuadMatch{}, confirmingMatches...)
-			matches = append(matches, match)
-		}
+			// Create a new WCS object with the affine transformation matrix:
+			WCS := wcs.NewWorldCoordinateSystem(
+				xr,
+				yr,
+				wcs.WCSParams{
+					Projection:   wcs.RADEC_TAN,
+					AffineParams: params,
+				},
+			)
+
+			// Preallocate slice to accumulate confirming matches for the current match:
+			confirmingMatches := make([]spatial.QuadMatch, 0, len(candidateMatches))
+
+			// Now, iterate through all candidate matches to see if they confirm the current match.
+			for j, candidate := range candidateMatches {
+				// Check that the candidate is not the same as the current match:
+				if hashes[j] == hash {
+					continue
+				}
+
+				// Original pixel coordinates of the candidate's quad points (A, B, C, D):
+				aX, aY := candidate.Quad.A.X, candidate.Quad.A.Y
+				// Apply the inverse affine transformation to get transformed pixel coordinates of the candidate's quad points:
+				xa, ya := WCS.EquatorialCoordinateToPixel(candidate.Quad.A.RA, candidate.Quad.A.Dec)
+
+				bX, bY := candidate.Quad.B.X, candidate.Quad.B.Y
+				xb, yb := WCS.EquatorialCoordinateToPixel(candidate.Quad.B.RA, candidate.Quad.B.Dec)
+
+				cX, cY := candidate.Quad.C.X, candidate.Quad.C.Y
+				xc, yc := WCS.EquatorialCoordinateToPixel(candidate.Quad.C.RA, candidate.Quad.C.Dec)
+
+				dX, dY := candidate.Quad.D.X, candidate.Quad.D.Y
+				xd, yd := WCS.EquatorialCoordinateToPixel(candidate.Quad.D.RA, candidate.Quad.D.Dec)
+
+				// Calculate the Euclidean distance between the two sets of points:
+				distA := math.Hypot(aX-xa, aY-ya)
+				distB := math.Hypot(bX-xb, bY-yb)
+				distC := math.Hypot(cX-xc, cY-yc)
+				distD := math.Hypot(dX-xd, dY-yd)
+
+				// If the distance between the two sets of points is within the specified tolerance, then we have a match:
+				if distA <= tolerance && distB <= tolerance && distC <= tolerance && distD <= tolerance {
+					confirmingMatches = append(confirmingMatches, candidate)
+				}
+			}
+
+			// Update the matches slice with the confirmed matches if they have the most confirmations:
+			mu.Lock()
+			if len(confirmingMatches) > maximumConfirmations {
+				maximumConfirmations = len(confirmingMatches)
+				// Copy the slice so we start fresh.
+				matches = append([]spatial.QuadMatch{}, confirmingMatches...)
+				// Include the original candidate match.
+				matches = append(matches, match)
+			}
+			mu.Unlock()
+			return nil
+		})
+	}
+
+	// Wait for all goroutines to finish and collect any errors:
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	return matches, nil
