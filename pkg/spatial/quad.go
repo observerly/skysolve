@@ -11,9 +11,11 @@ package spatial
 /*****************************************************************************************************************/
 
 import (
+	"context"
 	"errors"
 
 	"github.com/observerly/skysolve/pkg/quad"
+	"golang.org/x/sync/errgroup"
 	"gonum.org/v1/gonum/spatial/vptree"
 )
 
@@ -104,16 +106,31 @@ func (m *QuadMatcher) MatchQuad(q quad.Quad, tolerance float64) (*QuadMatch, err
 // MatchQuads finds matches for all generated quads.
 // Returns a slice of Match containing successful matches.
 func (m *QuadMatcher) MatchQuads(quads []quad.Quad, tolerance float64) ([]QuadMatch, error) {
-	matches := []QuadMatch{}
+	// Preallocate slice for matches to avoid reallocation:
+	matches := make([]QuadMatch, 0, len(quads))
+
+	// Use errgroup to run each quad concurrently and handle errors:
+	g, _ := errgroup.WithContext(context.Background())
 
 	for _, q := range quads {
-		match, err := m.MatchQuad(q, tolerance)
-		if err != nil {
-			// Handle quads with no matches or exceeded usage as needed, e.g., skip or log
-			continue
-		}
+		// Create a local copy for the goroutine closure:
+		quad := q
 
-		matches = append(matches, *match)
+		g.Go(func() error {
+			match, err := m.MatchQuad(quad, tolerance)
+			if err != nil {
+				// Handle quads with no matches or exceeded usage as needed, e.g., skip or log:
+				return nil
+			}
+
+			matches = append(matches, *match)
+			return nil
+		})
+	}
+
+	// Wait for all goroutines to finish and check for errors:
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	return matches, nil
