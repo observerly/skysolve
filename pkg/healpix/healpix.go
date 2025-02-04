@@ -162,6 +162,20 @@ func (h *HealPIX) GetFaceXY(pixel int) (face int, x int, y int) {
 }
 
 /*****************************************************************************************************************/
+
+func (h *HealPIX) GetPixelIndexFromFaceXY(face int, x int, y int) int {
+	switch h.Scheme {
+	case RING:
+		return getRingPixelIndexFromFaceXY(face, x, y, h.NSide)
+	case NESTED:
+		return getNestedPixelIndexFromFaceXY(face, x, y, h.NSide)
+	default:
+		return getRingPixelIndexFromFaceXY(face, x, y, h.NSide)
+	}
+}
+
+/*****************************************************************************************************************/
+
 // GetPixelArea returns the area of each pixel in the HEALPix projection, in degrees.
 func (h *HealPIX) GetPixelArea() float64 {
 	// Get the number of pixels for the given NSide:
@@ -642,6 +656,32 @@ func getNestedFaceXY(nside, index int) (face, x, y int) {
 	iy := ctab[raw2&0xff] | (ctab[(raw2>>8)&0xff] << 4)
 
 	return faceNumber, ix, iy
+}
+
+/*****************************************************************************************************************/
+
+// getRingPixelIndexFromFaceXY converts the given (face, x, y) coordinates to a RING pixel index.
+// It does so by first computing the corresponding NESTED pixel index, converting that to spherical
+// coordinates, and then converting those spherical coordinates to the RING index.
+func getRingPixelIndexFromFaceXY(face, x, y, nside int) int {
+	// First, get the NESTED pixel index from (face, x, y)
+	nestedIndex := getNestedPixelIndexFromFaceXY(face, x, y, nside)
+	// Convert the nested index to spherical coordinates (θ, φ)
+	theta, phi := convertNestedIndexToSpherical(nside, nestedIndex)
+	// Convert spherical coordinates to a RING pixel index
+	return convertSphericalToRingIndex(nside, theta, phi)
+}
+
+/*****************************************************************************************************************/
+
+// getNestedPixelIndexFromFaceXY encodes the (face, x, y) into a NESTED pixel index.
+// It uses the lookup table `utab` to interleave the bits of x and y.
+func getNestedPixelIndexFromFaceXY(face, x, y, nside int) int {
+	return face*nside*nside +
+		(utab[x&0xff] |
+			(utab[(x>>8)&0xff] << 16) |
+			(utab[y&0xff] << 1) |
+			(utab[(y>>8)&0xff] << 17))
 }
 
 /*****************************************************************************************************************/
