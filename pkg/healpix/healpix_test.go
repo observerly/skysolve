@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/observerly/skysolve/pkg/astrometry"
@@ -1228,6 +1229,107 @@ func TestGetPixelIndexFromFaceXY(t *testing.T) {
 
 	if pixelIndex != expectedPixelIndex {
 		t.Errorf("Expected Pixel Index=%d, Got Pixel Index=%d", expectedPixelIndex, pixelIndex)
+	}
+}
+
+/*****************************************************************************************************************/
+
+// TestGetNeighbouringPixelsNested tests the neighbour lookup in the NESTED scheme.
+func TestGetNeighbouringPixelsNested(t *testing.T) {
+	// Create a HealPIX instance with NSide=8 and the NESTED scheme.
+	h := NewHealPIX(8, NESTED)
+
+	// Define test cases; the expected neighbour lists are taken from your healpy output.
+	testCases := []struct {
+		pixel    int
+		expected []int
+		name     string
+	}{
+		{
+			pixel:    0,
+			expected: []int{277, 279, 2, 3, 1, 363, 362, 575},
+			name:     "Pixel0",
+		},
+		{
+			pixel:    10,
+			expected: []int{287, 309, 32, 33, 11, 9, 8, 285},
+			name:     "Pixel10",
+		},
+		{
+			pixel:    50,
+			expected: []int{39, 45, 56, 57, 51, 49, 48, 37},
+			name:     "Pixel50",
+		},
+		{
+			pixel:    100,
+			expected: []int{97, 99, 102, 103, 101, 79, 78, 75},
+			name:     "Pixel100",
+		},
+		{
+			pixel:    200,
+			expected: []int{477, 479, 202, 203, 201, 195, 194, 471},
+			name:     "Pixel200",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := h.GetNeighbouringPixels(tc.pixel)
+			sort.Ints(got)
+			sort.Ints(tc.expected)
+			if !reflect.DeepEqual(got, tc.expected) {
+				t.Errorf("NESTED: For pixel %d, expected neighbours %v, but got %v", tc.pixel, tc.expected, got)
+			}
+		})
+	}
+}
+
+/*****************************************************************************************************************/
+
+// TestGetNeighbouringPixelsRing tests the neighbour lookup in the RING scheme.
+func TestGetNeighbouringPixelsRing(t *testing.T) {
+	// Create a HealPIX instance with NSide=8 and the RING scheme.
+	h := NewHealPIX(8, RING)
+
+	// Define test cases; expected values come from your healpy output.
+	testCases := []struct {
+		pixel    int
+		expected []int
+		name     string
+	}{
+		{
+			pixel:    0,
+			expected: []int{4, 11, 3, 1, 6, 5, 13},
+			name:     "Pixel0",
+		},
+		{
+			pixel:    10,
+			expected: []int{21, 20, 9, 2, 3, 11, 22, 37},
+			name:     "Pixel10"},
+		{
+			pixel:    50,
+			expected: []int{72, 71, 49, 31, 32, 51, 73, 99},
+			name:     "Pixel50"},
+		{
+			pixel:    100,
+			expected: []int{130, 99, 73, 51, 74, 101, 131, 163},
+			name:     "Pixel100"},
+		{
+			pixel:    200,
+			expected: []int{232, 199, 168, 136, 169, 201, 233, 264},
+			name:     "Pixel200",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := h.GetNeighbouringPixels(tc.pixel)
+			sort.Ints(got)
+			sort.Ints(tc.expected)
+			if !reflect.DeepEqual(got, tc.expected) {
+				t.Errorf("RING: For pixel %d, expected neighbours %v, but got %v", tc.pixel, tc.expected, got)
+			}
+		})
 	}
 }
 

@@ -176,6 +176,111 @@ func (h *HealPIX) GetPixelIndexFromFaceXY(face int, x int, y int) int {
 
 /*****************************************************************************************************************/
 
+// GetNeighbouringPixels returns a slice of pixel indices for all neighbouring pixels
+// (typically eight, except near polar “corners” where fewer exist) for the given pixel index.
+func (h *HealPIX) GetNeighbouringPixels(pixel int) []int {
+	faceNumber, ix, iy := h.GetFaceXY(pixel)
+	maxXY := h.NSide - 1
+
+	// If the pixel is safely interior, simply compute the eight offsets.
+	if ix > 0 && ix < maxXY && iy > 0 && iy < maxXY {
+		return []int{
+			h.GetPixelIndexFromFaceXY(faceNumber, ix-1, iy-1),
+			h.GetPixelIndexFromFaceXY(faceNumber, ix, iy-1),
+			h.GetPixelIndexFromFaceXY(faceNumber, ix+1, iy-1),
+			h.GetPixelIndexFromFaceXY(faceNumber, ix-1, iy),
+			h.GetPixelIndexFromFaceXY(faceNumber, ix+1, iy),
+			h.GetPixelIndexFromFaceXY(faceNumber, ix-1, iy+1),
+			h.GetPixelIndexFromFaceXY(faceNumber, ix, iy+1),
+			h.GetPixelIndexFromFaceXY(faceNumber, ix+1, iy+1),
+		}
+	}
+
+	var result []int
+
+	// pixel is on an edge boundary, we need to be cognizant of
+	// special corner pixels and edge index swapping
+	iterLen := 9
+	// account for special pixels that only have 7 neighbors
+	if faceNumber < 8 && ix == maxXY && iy == maxXY {
+		iterLen = 8
+	}
+	iterStart := 0
+	if faceNumber > 3 && ix == 0 && iy == 0 {
+		iterStart = 1
+	}
+
+	for i := iterStart; i < iterLen; i++ {
+		xOffset := i%3 - 1
+		yOffset := (i / 3) - 1
+
+		// If the pixel offset is (0, 0), skip it:
+		if xOffset == 0 && yOffset == 0 {
+			continue
+		}
+
+		// Calculate the x/y coordinates of the neighbor:
+		x := ix + xOffset
+
+		// Calculate the x/y coordinates of the neighbor:
+		y := iy + yOffset
+
+		// Track whether the neighbor is in a different face, and which x/y direction the face is in:
+		fxdir, fydir := 0, 0
+
+		if x < 0 {
+			fxdir = -1
+			x += h.NSide
+		} else if x >= h.NSide {
+			fxdir = 1
+			x -= h.NSide
+		}
+
+		if y < 0 {
+			fydir = -1
+			y += h.NSide
+		} else if y >= h.NSide {
+			fydir = 1
+			y -= h.NSide
+		}
+
+		// Apply special adjustments for polar faces:
+		if fxdir == 1 && fydir != -1 && faceNumber < 4 {
+			x = y
+			y = maxXY
+		}
+		if fydir == 1 && fxdir != -1 && faceNumber < 4 {
+			y = x
+			x = maxXY
+		}
+
+		if fydir == -1 && fxdir != 1 && faceNumber > 7 {
+			y = x
+			x = 0
+		}
+		if fxdir == -1 && fydir != 1 && faceNumber > 7 {
+			x = y
+			y = 0
+		}
+
+		faceNeighbour, err := NewFace(faceNumber).GetNeighbour(fxdir, fydir)
+
+		if err != nil {
+			continue
+		}
+
+		// Calculate the neighbour pixel index from the face and x/y coordinates:
+		neighbourPixel := h.GetPixelIndexFromFaceXY(faceNeighbour, x, y)
+
+		// Append the neighbour to the result:
+		result = append(result, neighbourPixel)
+	}
+
+	return result
+}
+
+/*****************************************************************************************************************/
+
 // GetPixelArea returns the area of each pixel in the HEALPix projection, in degrees.
 func (h *HealPIX) GetPixelArea() float64 {
 	// Get the number of pixels for the given NSide:
