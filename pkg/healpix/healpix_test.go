@@ -1212,3 +1212,23 @@ func TestGetFaceXY(t *testing.T) {
 }
 
 /*****************************************************************************************************************/
+
+func TestGetPixelIndexFromFaceXY(t *testing.T) {
+	nside := 2
+
+	healpix := NewHealPIX(nside, RING)
+
+	face := 4
+	x := 1
+	y := 1
+
+	pixelIndex := healpix.GetPixelIndexFromFaceXY(face, x, y)
+
+	expectedPixelIndex := 12
+
+	if pixelIndex != expectedPixelIndex {
+		t.Errorf("Expected Pixel Index=%d, Got Pixel Index=%d", expectedPixelIndex, pixelIndex)
+	}
+}
+
+/*****************************************************************************************************************/
