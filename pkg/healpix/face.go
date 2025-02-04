@@ -10,6 +10,11 @@ package healpix
 
 /*****************************************************************************************************************/
 
+import (
+	"fmt"
+)
+
+/*****************************************************************************************************************/
 
 const (
 	BasePixelsPerRow int = 4
@@ -100,6 +105,27 @@ func init() {
 // NewFace returns the Face with the specified face index (0 to 11):
 func NewFace(index int) Face {
 	return faces[index]
+}
+
+/*****************************************************************************************************************/
+
+// Return the face id of the neighbor of the current face in the given direction. Each of x and y expects one of
+// three values: -1, 0, or 1.
+// In this scheme, x and y have 0 at the bottom most vertex of the face (which are arrayed as diamonds conceptually),
+// and each increases outward along the diamond boundary, x along the left side and y along the right side.
+// So x,y == -1,-1 is the directly southern neighbor; x,y == 1,1 is the directly northern neighbor, and x,y == -1,1
+// is the northwestern neighbor.
+func (f Face) GetNeighbour(xOffset int, yOffset int) (int, error) {
+	xpack := byte(xOffset + 1)
+	ypack := byte(yOffset+1) << 2
+
+	index := xpack | ypack
+
+	if n, ok := f.neighbors[byte(index)]; ok {
+		return n, nil
+	}
+
+	return -1, fmt.Errorf("no neighbor in direction %d,%d", xOffset, yOffset)
 }
 
 /*****************************************************************************************************************/
