@@ -149,6 +149,19 @@ func (h *HealPIX) GetNumberOfPixels() int {
 
 /*****************************************************************************************************************/
 
+func (h *HealPIX) GetFaceXY(pixel int) (face int, x int, y int) {
+	// Branch to the specific indexing scheme (RING or NESTED):
+	switch h.Scheme {
+	case RING:
+		return getRingFaceXY(h.NSide, pixel)
+	case NESTED:
+		return getNestedFaceXY(h.NSide, pixel)
+	default:
+		return getRingFaceXY(h.NSide, pixel)
+	}
+}
+
+/*****************************************************************************************************************/
 // GetPixelArea returns the area of each pixel in the HEALPix projection, in degrees.
 func (h *HealPIX) GetPixelArea() float64 {
 	// Get the number of pixels for the given NSide:
@@ -540,24 +553,8 @@ func convertNestedIndexToSpherical(nside, index int) (theta, phi float64) {
 	// Total number of pixels in the HEALPix map:
 	npix := 12 * nside * nside
 
-	// Determine the number of pixels per face:
-	npface := nside * nside
-
-	// Determine the face number and the pixel number within that face:
-	// N.B. Face numbers range from 0 to 11:
-	faceNumber := index / npface
-	pixInFace := index % npface
-
-	// Extract ix using the ctab lookup table:
-	raw1 := (pixInFace & 0x5555) | ((pixInFace & 0x55550000) >> 15)
-	ix := ctab[raw1&0xff] | (ctab[(raw1>>8)&0xff] << 4)
-
-	// Shift pixInFace right by 1 (equivalent to pix >>= 1):
-	pixShifted := pixInFace >> 1
-
-	// Extract iy using the ctab lookup table:
-	raw2 := (pixShifted & 0x5555) | ((pixShifted & 0x55550000) >> 15)
-	iy := ctab[raw2&0xff] | (ctab[(raw2>>8)&0xff] << 4)
+	// Determine the face number, x, and y coordinates for the pixel index:
+	faceNumber, ix, iy := getNestedFaceXY(nside, index)
 
 	// Calculate the ring number (jr):
 	jr := jrll[faceNumber]*nside - ix - iy - 1
@@ -610,6 +607,41 @@ func convertNestedIndexToSpherical(nside, index int) (theta, phi float64) {
 	theta = math.Acos(z)
 
 	return theta, phi
+}
+
+/*****************************************************************************************************************/
+
+func getRingFaceXY(nside, index int) (face, x, y int) {
+	theta, phi := convertRingIndexToSpherical(nside, index)
+	// Convert spherical coordinates to a nested index.
+	nestedIndex := convertSphericalToNestedIndex(nside, theta, phi)
+	// Extract (face, x, y) from the nested index.
+	return getNestedFaceXY(nside, nestedIndex)
+}
+
+/*****************************************************************************************************************/
+
+func getNestedFaceXY(nside, index int) (face, x, y int) {
+	// Determine the number of pixels per face:
+	npface := nside * nside
+
+	// Determine the face number and the pixel number within that face:
+	// N.B. Face numbers range from 0 to 11:
+	faceNumber := index / npface
+	pixelsInFace := index % npface
+
+	// Extract ix using the ctab lookup table:
+	raw1 := (pixelsInFace & 0x5555) | ((pixelsInFace & 0x55550000) >> 15)
+	ix := ctab[raw1&0xff] | (ctab[(raw1>>8)&0xff] << 4)
+
+	// Shift pixelsInFace right by 1 (equivalent to pix >>= 1):
+	pixelsInFaceShifted := pixelsInFace >> 1
+
+	// Extract iy using the ctab lookup table:
+	raw2 := (pixelsInFaceShifted & 0x5555) | ((pixelsInFaceShifted & 0x55550000) >> 15)
+	iy := ctab[raw2&0xff] | (ctab[(raw2>>8)&0xff] << 4)
+
+	return faceNumber, ix, iy
 }
 
 /*****************************************************************************************************************/

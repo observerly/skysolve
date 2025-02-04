@@ -1192,3 +1192,23 @@ func TestGetPixelIndicesFromEquatorialRadialRegion(t *testing.T) {
 }
 
 /*****************************************************************************************************************/
+
+func TestGetFaceXY(t *testing.T) {
+	nside := 2
+
+	healpix := NewHealPIX(nside, RING)
+
+	pixelIndex := 12
+
+	face, x, y := healpix.GetFaceXY(pixelIndex)
+
+	expectedFace := 4
+	expectedX := 1
+	expectedY := 1
+
+	if face != expectedFace || x != expectedX || y != expectedY {
+		t.Errorf("Expected Face=%d, X=%d, Y=%d, Got Face=%d, X=%d, Y=%d", expectedFace, expectedX, expectedY, face, x, y)
+	}
+}
+
+/*****************************************************************************************************************/
