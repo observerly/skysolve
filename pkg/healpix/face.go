@@ -10,6 +10,14 @@ package healpix
 
 /*****************************************************************************************************************/
 
+
+const (
+	BasePixelsPerRow int = 4
+	BasePixelRows    int = 3
+)
+
+/*****************************************************************************************************************/
+
 // Face represents the properties of a base pixel (or “face”) of a HEALPix map.
 type Face struct {
 	faceId       int          // the index of the face (0 to 11), arranged in rings around the map
@@ -18,6 +26,10 @@ type Face struct {
 	southVertexX int          // the x coordinate of the southernmost vertex (typically between 0 and 7)
 	neighbors    map[byte]int // a map of neighboring faces; the key packs the (x,y) offset into a byte
 }
+
+/*****************************************************************************************************************/
+
+var faces []Face
 
 /*****************************************************************************************************************/
 
@@ -37,6 +49,57 @@ var neighbors = [][]int{
 	{8, 8, 10, 9, 5, 10, 6, 1},
 	{9, 9, 11, 10, 6, 11, 7, 2},
 	{10, 10, 8, 11, 7, 8, 4, 3},
+}
+
+/*****************************************************************************************************************/
+
+// init precomputes all the properties for each of the 12 faces.
+func init() {
+	faces = make([]Face, 12)
+	for i := 0; i < 12; i++ {
+		row := i / BasePixelsPerRow
+		col := i % BasePixelsPerRow
+		faceSouthY := row + 2
+		faceSouthX := 2*col - (row % 2) + 1
+
+		faces[i] = Face{
+			faceId:       i,
+			row:          row,
+			southVertexY: faceSouthY,
+			southVertexX: faceSouthX,
+			neighbors:    make(map[byte]int, 6),
+		}
+
+		// nind indexes into neighbors[i] for the current face:
+		nind := 0
+		// Loop over directional offsets (dx, dy) from -1 to 1 in both dimensions:
+		for dx := -1; dx <= 1; dx++ {
+			for dy := -1; dy <= 1; dy++ {
+				// Skip certain combinations according to the row:
+				if row < 2 && dx == 1 && dy == 1 {
+					continue
+				}
+
+				// Skip certain combinations according to the row:
+				if row > 0 && dx == -1 && dy == -1 {
+					continue
+				}
+
+				// Pack the directional offsets into a key, e.g., (dx+1) and (dy+1) each yield a value
+				// in {0,1,2}; the dy part is shifted left by 2:
+				key := byte(dx+1) | (byte(dy+1) << 2)
+				faces[i].neighbors[key] = neighbors[i][nind]
+				nind++
+			}
+		}
+	}
+}
+
+/*****************************************************************************************************************/
+
+// NewFace returns the Face with the specified face index (0 to 11):
+func NewFace(index int) Face {
+	return faces[index]
 }
 
 /*****************************************************************************************************************/
