@@ -76,7 +76,7 @@ func (g *GAIAServiceClient) PerformRadialSearch(eq astrometry.ICRSEquatorialCoor
 	// N.B. (use only gold standard data, e.g., photometry processing mode (byte) i.e., phot_proc_mode = '0'):
 	const gaiaADQLTemplate = `
 		SELECT TOP {{.Limit}} {{.Record}}
-		FROM gaiadr2.gaia_source
+		FROM gaiadr3.gaia_source
 		WHERE CONTAINS(
 			POINT('ICRS', ra, dec),
 			CIRCLE('ICRS', {{.RA}}, {{.Dec}}, {{.Radius}})
