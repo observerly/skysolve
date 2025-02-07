@@ -40,6 +40,58 @@ func NewIndexer(
 
 /*****************************************************************************************************************/
 
+func (i *Indexer) GenerateStarsForPixel(pixel int) ([]star.Star, error) {
+	// Convert the pixel index to the pixel's equatorial coordinate:
+	eq := i.HealPIX.ConvertPixelIndexToEquatorial(pixel)
+
+	// Get the radial extent of the pixel:
+	radius := i.HealPIX.GetPixelRadialExtent(pixel)
+
+	// Get the sources within the pixel's radial extent:
+	sources, err := i.Catalog.PerformRadialSearch(eq, radius)
+
+	// If we encounter an error, return it:
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert the sources to stars:
+	var stars []star.Star
+
+	for _, source := range sources {
+		// For each source, we just need to sense check that the source is within the pixel:
+		eq := astrometry.ICRSEquatorialCoordinate{
+			RA:  source.RA,
+			Dec: source.Dec,
+		}
+
+		pixelIndex := i.HealPIX.ConvertEquatorialToPixelIndex(eq)
+
+		// If the source is not within the pixel, skip it:
+		if pixelIndex != pixel {
+			continue
+		}
+
+		stars = append(stars, star.Star{
+			Designation: source.Designation,
+			X:           source.RA,
+			Y:           source.Dec,
+			RA:          source.RA,
+			Dec:         source.Dec,
+			Intensity:   source.PhotometricGMeanFlux,
+		})
+	}
+
+	// We should have at least 5 stars, if we have more just slice the first 5:
+	if len(stars) > 5 {
+		stars = stars[:5]
+	}
+
+	return stars, nil
+}
+
+/*****************************************************************************************************************/
+
 func (i *Indexer) GenerateQuadsForPixel(pixel int) ([]quad.Quad, error) {
 	// Convert the pixel index to the pixel's equatorial coordinate:
 	eq := i.HealPIX.ConvertPixelIndexToEquatorial(pixel)
