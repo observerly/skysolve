@@ -38,6 +38,9 @@ RUN go install honnef.co/go/tools/cmd/staticcheck@latest
 # Ensure go-critic is executable and in the PATH
 RUN go install github.com/go-critic/go-critic/cmd/gocritic@latest
 
+# Ensure goreleaser is executable and in the PATH
+RUN go install github.com/goreleaser/goreleaser/v2@latest
+
 # Add Go binaries to PATH
 ENV PATH="$PATH:$(go env GOPATH)/bin"
 
