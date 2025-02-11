@@ -31,5 +31,7 @@ go.work.sum
 .background
 .cache
 .output
+indexes/*/*.json
+
 # Added by goreleaser init:
 dist/
