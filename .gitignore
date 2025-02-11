@@ -31,3 +31,5 @@ go.work.sum
 .background
 .cache
 .output
+# Added by goreleaser init:
+dist/

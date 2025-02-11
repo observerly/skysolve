@@ -1,0 +1,39 @@
+# Copyright © Observerly Ltd.
+
+# @see goreleaser documentation at https://goreleaser.com
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+
+version: 2
+
+before:
+  hooks:
+    # You may remove this if you don't use go modules.
+    - go mod tidy
+    # you may remove this if you don't need go generate
+    - go generate ./...
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+
+archives:
+  # this name template makes the OS and Arch compatible with the results of `uname`.
+  - name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+release:
+  # Whether to remove existing draft releases with the same name before creating a new one.
+  replace_existing_draft: false
+  # Whether to use an existing draft release as the target release.
+  use_existing_draft: true
+  # What to do with the release notes in case there the release already exists.
+  mode: keep-existing
