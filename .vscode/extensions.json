@@ -2,7 +2,8 @@
   "recommendations": [
     "golang.go",
     "neverik.go-critic",
+    "redhat.vscode-yaml",
     "tamasfe.even-better-toml",
-    "ZainChen.json"
+    "ZainChen.json",
   ]
 }
