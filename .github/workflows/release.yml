@@ -5,8 +5,9 @@ on:
     branches:
       - main
 
+  # Triggers when a release is created (i.e. a draft)
   release:
-    types: [released]
+    types: [created]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -34,12 +35,23 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
+      - name: Set GoReleaser args
+        id: set_args
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            echo "args=release --clean --snapshot" >> $GITHUB_OUTPUT
+          else
+            echo "args=release --clean" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean --snapshot
+          args: ${{ steps.set_args.outputs.args }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_FINGERPRINT: ${{ steps.gpgkey.outputs.fingerprint }}
