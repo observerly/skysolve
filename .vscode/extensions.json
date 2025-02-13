@@ -1,5 +1,7 @@
 {
   "recommendations": [
+    "alexcvzz.vscode-sqlite",
+    "Ariga.atlas-hcl",
     "golang.go",
     "neverik.go-critic",
     "redhat.vscode-yaml",
