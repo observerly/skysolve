@@ -23,6 +23,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set the working directory to /usr/src/app
 WORKDIR /usr/src/app
 
+# Install the of the Atlas CLI:
+RUN curl -sSf https://atlasgo.sh | sh
+
 # N.B. (cosmotrek is now deprecated):
 # RUN go install github.com/cosmtrek/air@latest
 
