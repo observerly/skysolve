@@ -115,7 +115,7 @@ func init() {
 		"ra",
 		"",
 		float32(math.NaN()),
-		"The approximate right ascension of the image",
+		"The approximate right ascension of the central image point (in degrees)",
 	)
 
 	// Add the approximated point equatorial coordinate dec to the astrometry command for setting the approximate dec:
@@ -125,7 +125,7 @@ func init() {
 		"dec",
 		"",
 		float32(math.NaN()),
-		"The approximate declination of the image",
+		"The approximate declination of the central image point (in degrees)",
 	)
 
 	// Add the pixel scale X flag to the astrometry command for setting the pixel scale in the x-axis:
@@ -135,7 +135,7 @@ func init() {
 		"pixel-scale-x",
 		"x",
 		math.Inf(-1),
-		"The pixel scale in the x-axis of the image",
+		"The pixel scale in the x-axis of the image (in degrees)",
 	)
 
 	// Add the pixel scale Y flag to the astrometry command for setting the pixel scale in the y-axis:
@@ -145,7 +145,7 @@ func init() {
 		"pixel-scale-y",
 		"y",
 		math.Inf(-1),
-		"The pixel scale in the y-axis of the image",
+		"The pixel scale in the y-axis of the image (in degrees)",
 	)
 
 	// Add the quad tolerance flag to the astrometry command for setting the quad tolerance:
