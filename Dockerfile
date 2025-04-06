@@ -2,7 +2,7 @@
 
 # //////////////////////////////////////////////////////////////////////////////////////////////////////////////////// #
 
-FROM golang:1.23-bookworm AS development
+FROM golang:1.24-bookworm AS development
 
 # //////////////////////////////////////////////////////////////////////////////////////////////////////////////////// #
 
@@ -59,6 +59,19 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
     -p ssh-agent \
     -p https://github.com/zsh-users/zsh-autosuggestions \
     -p https://github.com/zsh-users/zsh-completions
+
+# Install Bun
+RUN curl -fsSL https://bun.sh/install | bash
+
+# Set the BUN_INSTALL environment variable
+ENV BUN_INSTALL="/root/.bun"
+
+# Set the PATH to include Bun
+ENV PATH="$BUN_INSTALL/bin:$PATH"
+
+# Configure Zsh with Bun
+RUN echo 'export BUN_INSTALL="/root/.bun"' >> ~/.zshrc 
+RUN echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> ~/.zshrc
 
 # Copy application code
 COPY . /usr/src/app/
